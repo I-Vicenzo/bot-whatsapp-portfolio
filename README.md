@@ -24,6 +24,8 @@ docker compose up
 
 Sem `.env`, sobe em modo demo com agenda e conversas de exemplo. WhatsApp e IA ficam desligados e sinalizados na interface.
 
+Com **PostgreSQL** em vez de SQLite (mesmas regras, em PL/pgSQL): `docker compose -f docker-compose.yml -f docker-compose.postgres.yml up`.
+
 Para adaptar a outro negócio, edite [data/clinica.yaml](data/clinica.yaml) (nome, endereço, horários, especialidades, convênios, FAQ) e rode `docker compose restart`: a pasta `data` é montada no container, sem rebuild. Um arquivo inválido impede a subida com uma mensagem apontando o campo errado.
 
 ## Funcionalidades
@@ -92,7 +94,7 @@ flowchart LR
 
 **Regras antes da IA.** Regex em português e máquina de estados resolvem o roteiro: o comportamento é previsível, testável e não custa nada por mensagem. A IA é reserva para perguntas fora do roteiro. Ela não tem ferramentas, recebe só dados públicos da clínica e, se a resposta afirmar que agendou ou cancelou algo, a resposta é descartada e a conversa vai para um humano.
 
-**Regras de agenda no banco.** O código valida antes para dar boa experiência, mas a última barreira é o SQLite:
+**Regras de agenda no banco.** O código valida antes para dar boa experiência, mas a última barreira é o banco (SQLite por padrão; PostgreSQL com as mesmas regras em PL/pgSQL):
 
 - `CHECK` garante a grade de 30 minutos e o formato canônico do horário
 - índices únicos parciais (`WHERE status = 'confirmed'`) impedem horário duplicado por especialidade e por paciente; cancelar libera o horário
@@ -138,10 +140,11 @@ uv sync
 uv run uvicorn app.main:create_app --factory --reload   # http://localhost:8000
 uv run ruff check && uv run ruff format --check
 uv run pytest --cov
+TEST_DATABASE_URL=postgresql+psycopg://usuario:senha@localhost/bot uv run pytest   # suíte no PostgreSQL
 uv run pytest -m e2e          # navegador (Playwright); no Windows sem Chromium: --browser-channel msedge
 ```
 
-São mais de 400 testes, com cobertura acima de 95%: diálogos completos (`chat.send("oi")` → resposta e estado), regras do banco, disputa de horário, webhook com a API da Meta simulada (respx), IA com um LLM falso e o painel, além de testes ponta a ponta no navegador com Playwright. O CI roda lint, formatação, testes e E2E a cada push.
+São mais de 400 testes, com cobertura acima de 95%: diálogos completos (`chat.send("oi")` → resposta e estado), regras do banco, disputa de horário, webhook com a API da Meta simulada (respx), IA com um LLM falso e o painel, além de testes ponta a ponta no navegador com Playwright. O CI roda lint, formatação, testes (SQLite e PostgreSQL) e E2E a cada push.
 
 ## Aviso
 
@@ -150,7 +153,6 @@ Todos os dados são **fictícios**: clínica, profissionais, endereço, telefone
 ## Próximos passos
 
 - Demo pública hospedada
-- PostgreSQL via perfil do docker-compose (triggers em PL/pgSQL)
 
 Roteiro completo e decisões em [PLANO.md](PLANO.md).
 

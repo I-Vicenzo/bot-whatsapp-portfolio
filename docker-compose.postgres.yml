@@ -1,0 +1,26 @@
+# PostgreSQL em vez de SQLite (mesmas regras de agenda, em PL/pgSQL):
+#   docker compose -f docker-compose.yml -f docker-compose.postgres.yml up
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: bot
+      POSTGRES_USER: bot
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-bot-local-dev} # troque fora do ambiente local
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bot -d bot"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  app:
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql+psycopg://bot:${POSTGRES_PASSWORD:-bot-local-dev}@postgres:5432/bot
+
+volumes:
+  postgres-data:
