@@ -30,7 +30,7 @@ Atendente virtual de uma clínica **fictícia e genérica** (sem marca própria)
 | Distribuição | Uma instância por cliente (single-tenant), configurada por arquivos e variáveis de ambiente | Simples; multi-tenant só se virar SaaS |
 | Entendimento | Normalização + regex PT-BR + parsers de data/hora | Previsível, testável, custo zero |
 | Conversa | Máquina de estados; estado e contexto persistidos por conversa | Sobrevive a reinício; testável sem HTTP |
-| IA | Cliente compatível com OpenAI, `base_url` configurável | Groq, OpenAI ou Ollama trocando só variáveis de ambiente |
+| IA | Cliente compatível com OpenAI, `base_url` configurável; padrão Groq `openai/gpt-oss-20b` | Groq, OpenAI ou Ollama trocando só variáveis de ambiente |
 | Front | HTML/CSS/JS puro servido pelo FastAPI; atualização por polling | Sem build e sem framework |
 | Painel | Usuário no banco com hash Argon2; sessão em cookie assinado | Simples e seguro o suficiente |
 | Testes | pytest, pytest-cov, respx (mock de HTTP) | Cobertura medida; integrações externas mockadas |
@@ -250,14 +250,18 @@ Observações:
 
 ### Fase 4: IA de reserva
 
-- [ ] Interface `LLMClient`: implementação compatível com OpenAI, `NullLLM` (desligada) e `FakeLLM` (testes)
-- [ ] Prompt de sistema montado a partir do YAML. Regras: responder só com esses dados, curto e em português; sem orientação médica ou diagnóstico; nunca inventar valores, horários ou convênios; sem resposta nos dados → devolver o marcador `[ENCAMINHAR]`
-- [ ] Marcador → encaminha para humano. Erro ou timeout → mesmo caminho da IA desligada
-- [ ] Limites: tamanho da pergunta, chamadas por contato/hora e teto diário; registro em `llm_calls`
-- [ ] Respostas da IA gravadas com autor `ai`, identificadas no painel e no simulador
-- [ ] Testes com `FakeLLM` (responde, não sabe, erro, timeout, desligada) + `scripts/eval_llm.py`: ~20 perguntas dentro e fora dos dados contra o provedor real (manual, fora do CI)
+- [x] Interface `LLMClient`: implementação compatível com OpenAI, `NullLLM` (desligada) e `FakeLLM` (testes)
+- [x] Prompt de sistema montado a partir do YAML. Regras: responder só com esses dados, curto e em português; sem orientação médica ou diagnóstico; nunca inventar valores, horários ou convênios; sem resposta nos dados → devolver o marcador `[ENCAMINHAR]`
+- [x] Marcador → encaminha para humano. Erro ou timeout → mesmo caminho da IA desligada
+- [x] Limites: tamanho da pergunta, chamadas por contato/hora e teto diário; registro em `llm_calls`
+- [x] Respostas da IA gravadas com autor `ai`, identificadas no painel e no simulador
+- [x] Testes com `FakeLLM` (responde, não sabe, erro, timeout, desligada) + `scripts/eval_llm.py`: ~20 perguntas dentro e fora dos dados contra o provedor real (manual, fora do CI)
+
+- [x] Extra: resposta da IA que afirma ter executado uma ação ("agendei", "cancelei"...) é descartada e vira encaminhamento
 
 **Pronto quando:** perguntas fora do roteiro são respondidas com dados da clínica, as desconhecidas vão para humano, e com a IA desligada todo o resto funciona.
+
+> Pendência (usuário): rodar `uv run python -m scripts.eval_llm` com uma chave real do Groq. Modelo padrão `openai/gpt-oss-20b`, já que o `llama-3.3-70b-versatile` foi descontinuado pelo Groq em 16/08/2026; conferir a lista atual em console.groq.com/docs/models.
 
 ### Fase 5: Painel do atendente
 
@@ -303,7 +307,7 @@ Observações:
 - [ ] Painel: Argon2; cookie HttpOnly + SameSite (+ Secure em produção); CSRF mitigado (SameSite + corpo JSON + checagem de `Origin`); limite de tentativas de login; em produção, recusa iniciar com senha padrão
 - [ ] Simulador exposto: rate limit por IP, tamanho máximo de mensagem (feitos na Fase 2), teto de chamadas à IA
 - [ ] XSS: conteúdo vindo de cliente nunca vai para `innerHTML`
-- [ ] IA sem ferramentas nem ações, com contexto só de dados públicos da clínica: uma injeção de prompt não agenda, não cancela e não expõe dados de outros pacientes
+- [x] IA sem ferramentas nem ações, com contexto só de dados públicos da clínica: uma injeção de prompt não agenda, não cancela e não expõe dados de outros pacientes
 - [ ] Container não-root; dependências travadas no `uv.lock`
 
 ## 9. Configuração (variáveis de ambiente)
