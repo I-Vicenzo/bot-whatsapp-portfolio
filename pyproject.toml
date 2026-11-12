@@ -10,6 +10,10 @@ dependencies = [
     "uvicorn[standard]>=0.32",
     "pydantic>=2.9",
     "pydantic-settings>=2.6",
+    "sqlalchemy>=2.1.8",
+    "alembic>=1.20.1",
+    "pyyaml>=6.0.3",
+    "tzdata>=2026.6",
 ]
 
 [dependency-groups]
@@ -38,6 +42,7 @@ branch = true
 
 [tool.coverage.report]
 show_missing = true
+fail_under = 90
 skip_covered = true
 
 [tool.ruff]
@@ -60,4 +65,6 @@ select = [
 ]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101"]
+"tests/**" = ["S101", "S608", "DTZ001"]
+# SQL de triggers montado só com constantes do próprio arquivo.
+"migrations/**" = ["S608"]

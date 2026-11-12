@@ -1,0 +1,70 @@
+# Dados da clínica usados pelo bot. TODOS OS DADOS SÃO FICTÍCIOS.
+# Trocar este arquivo adapta o bot a outro negócio; ele é validado na inicialização.
+
+clinic:
+  name: Clínica Aurora
+  address: Rua das Acácias Imaginárias, 100, Bairro Exemplo, Cidade Fictícia/SP (endereço fictício)
+  phone: (00) 0000-0000
+  timezone: America/Sao_Paulo
+
+# Intervalos "HH:MM-HH:MM", em múltiplos de 30 min. Vários intervalos = pausa entre eles.
+business_hours:
+  monday: ["08:00-12:00", "13:30-18:00"]
+  tuesday: ["08:00-12:00", "13:30-18:00"]
+  wednesday: ["08:00-12:00", "13:30-18:00"]
+  thursday: ["08:00-12:00", "13:30-18:00"]
+  friday: ["08:00-12:00", "13:30-18:00"]
+  saturday: ["08:00-12:00"]
+  sunday: []
+
+scheduling:
+  min_advance_minutes: 120 # antecedência mínima para agendar
+  days_ahead: 14 # agenda aberta até hoje + 14 dias
+
+# Nomes de profissionais inventados; sem registro profissional.
+specialties:
+  - slug: clinica-geral
+    name: Clínica geral
+    professional: Dra. Helena Prado
+    price: 180.00
+    aliases: [clinico, clinico geral, geral, clinica medica]
+  - slug: cardiologia
+    name: Cardiologia
+    professional: Dr. Rafael Moreira
+    price: 280.00
+    aliases: [cardiologista, cardio, coracao]
+  - slug: dermatologia
+    name: Dermatologia
+    professional: Dra. Beatriz Lins
+    price: 250.00
+    aliases: [dermatologista, dermato, pele]
+  - slug: pediatria
+    name: Pediatria
+    professional: Dr. Caio Nunes
+    price: 220.00
+    aliases: [pediatra, crianca, infantil]
+
+insurances:
+  - Vida Plena Saúde
+  - Horizonte Assistência
+  - MedPrisma
+
+faq:
+  - keywords: [estacionamento, estacionar, vaga de carro]
+    answer: Temos estacionamento gratuito para pacientes, com 12 vagas, no subsolo do prédio.
+  - keywords: [pix, cartao, pagamento, pagar, forma de pagamento, dinheiro]
+    answer: Aceitamos Pix, cartões de débito e crédito (até 3x sem juros) e dinheiro.
+  - keywords: [documento, documentos, levar, carteirinha]
+    answer: >-
+      Traga um documento com foto e, se for usar convênio, a carteirinha do plano.
+      Pedimos chegar 15 minutos antes do horário.
+  - keywords: [acessibilidade, cadeira de rodas, elevador, rampa]
+    answer: A clínica tem rampa de acesso, elevador e banheiro adaptado.
+  - keywords: [teleconsulta, online, videochamada, remota]
+    answer: >-
+      No momento atendemos apenas presencialmente. Para dúvidas, fale com a recepção
+      pelo telefone da clínica.
+  - keywords: [resultado, resultados, exame, exames]
+    answer: >-
+      Resultados de exames são entregues na recepção ou enviados por e-mail.
+      Não informamos resultados por aqui, para proteger seus dados.

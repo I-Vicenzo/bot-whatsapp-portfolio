@@ -1,0 +1,38 @@
+# Clínica de teste: estável e independente de data/clinica.yaml.
+clinic:
+  name: Clínica Teste
+  address: Rua Teste, 1
+  phone: (00) 1111-1111
+  timezone: America/Sao_Paulo
+
+business_hours:
+  monday: ["08:00-12:00", "13:30-18:00"]
+  tuesday: ["08:00-12:00", "13:30-18:00"]
+  wednesday: ["08:00-12:00", "13:30-18:00"]
+  thursday: ["08:00-12:00", "13:30-18:00"]
+  friday: ["08:00-12:00", "13:30-18:00"]
+  saturday: ["08:00-12:00"]
+
+scheduling:
+  min_advance_minutes: 120
+  days_ahead: 14
+
+specialties:
+  - slug: clinica-geral
+    name: Clínica geral
+    professional: Dra. Ana Teste
+    price: 180.00
+    aliases: [clinico, clinico geral]
+  - slug: cardiologia
+    name: Cardiologia
+    professional: Dr. Bruno Teste
+    price: 280.50
+    aliases: [cardiologista, cardio]
+
+insurances: [Plano Alfa, Plano Beta]
+
+faq:
+  - keywords: [estacionamento, estacionar]
+    answer: Temos estacionamento gratuito.
+  - keywords: [pix, cartao]
+    answer: Aceitamos Pix e cartão.
