@@ -1,0 +1,23 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Runtime (banco SQLite)
+var/
+
+# Editores / SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
