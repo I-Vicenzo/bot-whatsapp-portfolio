@@ -6,8 +6,8 @@ Ordem de avaliação de cada mensagem:
 3. comandos globais (urgência, atendente, menu);
 4. dentro de um fluxo: desistência, perguntas informativas (responde e repete a pergunta do
    passo) e o passo atual;
-5. fora de fluxo: opção do menu, intenções de ação, FAQ, intenções informativas, saudação;
-   por fim, "não entendi" (na 3ª seguida, oferece atendente).
+5. fora de fluxo: opção do menu, intenções de ação, FAQ, intenções informativas, saudação,
+   IA de reserva (se ligada); por fim, "não entendi" (na 3ª seguida, oferece atendente).
 
 O motor altera a `Conversation` recebida; quem chama controla a transação.
 """
@@ -20,6 +20,7 @@ from typing import Any
 
 from sqlalchemy.orm import Session
 
+from app.ai.responder import AIResponder, AIStatus
 from app.clinic import ClinicData, SpecialtyInfo
 from app.clock import Clock
 from app.conversation import texts
@@ -68,6 +69,7 @@ class Source(StrEnum):
 
     RULE = "rule"
     FAQ = "faq"
+    AI = "ai"
     NOT_UNDERSTOOD = "not_understood"
     SILENT = "silent"
 
@@ -96,10 +98,17 @@ class _Turn:
 
 
 class ConversationEngine:
-    def __init__(self, clinic: ClinicData, scheduler: Scheduler, clock: Clock) -> None:
+    def __init__(
+        self,
+        clinic: ClinicData,
+        scheduler: Scheduler,
+        clock: Clock,
+        ai: AIResponder | None = None,
+    ) -> None:
         self.clinic = clinic
         self.scheduler = scheduler
         self.clock = clock
+        self.ai = ai
 
     # --- entrada --------------------------------------------------------------------------
 
@@ -204,7 +213,18 @@ class ConversationEngine:
         social = intents.detect(turn.text, intents.SOCIAL_INTENTS)
         if social is Intent.THANKS:
             return EngineResult([Reply(texts.THANKS)], social)
-        if social is Intent.GREETING or is_new:
+        if social is Intent.GREETING:
+            return EngineResult([self._menu(texts.greeting(self.clinic))], Intent.GREETING)
+
+        if self.ai is not None:
+            ai_result = self.ai.answer(turn.session, turn.conversation, turn.raw)
+            if ai_result.status is AIStatus.ANSWERED and ai_result.text:
+                return EngineResult([Reply(ai_result.text)], "ai", Source.AI)
+            if ai_result.status is AIStatus.HANDOFF:
+                return self._handoff(turn, urgent=False, reason=texts.AI_HANDOFF_REASON)
+            # Erro, limite ou pergunta longa: segue como se a IA estivesse desligada.
+
+        if is_new:
             return EngineResult([self._menu(texts.greeting(self.clinic))], Intent.GREETING)
 
         return EngineResult([self._menu(texts.NOT_UNDERSTOOD)], source=Source.NOT_UNDERSTOOD)
@@ -212,16 +232,18 @@ class ConversationEngine:
     def _menu(self, text: str = texts.MENU_PROMPT) -> Reply:
         return Reply(text, texts.MENU_OPTIONS)
 
-    def _handoff(self, turn: _Turn, *, urgent: bool) -> EngineResult:
+    def _handoff(self, turn: _Turn, *, urgent: bool, reason: str | None = None) -> EngineResult:
         conversation = turn.conversation
         conversation.status = ConversationStatus.WAITING_HUMAN
         conversation.priority = Priority.URGENT if urgent else Priority.NORMAL
-        conversation.handoff_reason = (
+        conversation.handoff_reason = reason or (
             "Urgência informada pelo cliente" if urgent else "Cliente pediu atendente"
         )
         self._reset(turn)
         if urgent:
             return EngineResult([Reply(texts.HANDOFF_URGENT)], Intent.URGENT)
+        if reason == texts.AI_HANDOFF_REASON:
+            return EngineResult([Reply(texts.AI_HANDOFF)], "ai_handoff", Source.AI)
         return EngineResult([Reply(texts.HANDOFF)], Intent.HUMAN)
 
     def _reset(self, turn: _Turn) -> None:

@@ -35,8 +35,11 @@ class Settings(BaseSettings):
     llm_enabled: bool = False
     llm_base_url: str = "https://api.groq.com/openai/v1"
     llm_api_key: SecretStr | None = None
-    llm_model: str = "llama-3.3-70b-versatile"
+    llm_model: str = "openai/gpt-oss-20b"
     llm_timeout_seconds: float = 15.0
+    llm_max_question_chars: int = 300
+    llm_calls_per_contact_per_hour: int = 10
+    llm_daily_cap: int = 200
 
     @property
     def whatsapp_enabled(self) -> bool:

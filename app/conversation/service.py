@@ -75,8 +75,9 @@ class ConversationService:
             else:
                 result = self.engine.handle(session, conversation, text)
             ids = [inbound.id]
+            author = Author.AI if result.source is Source.AI else Author.BOT
             for reply in result.replies:
-                message = self._add_message(session, conversation, Author.BOT, reply.render())
+                message = self._add_message(session, conversation, author, reply.render())
                 if message is not None:  # sem external_id nunca é duplicata
                     ids.append(message.id)
 

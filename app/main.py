@@ -13,6 +13,8 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
+from app.ai.client import OpenAICompatibleClient
+from app.ai.responder import AILimits, AIResponder
 from app.channels import simulator
 from app.channels.whatsapp import router as whatsapp
 from app.channels.whatsapp.client import WhatsAppClient
@@ -51,7 +53,9 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
                 if created:
                     logger.info("Dados de demonstração: %d consultas criadas", created)
 
-        conversation_engine = ConversationEngine(clinic, scheduler, clock)
+        llm = _llm_client(settings)
+        ai = AIResponder(llm, clinic, clock, _ai_limits(settings)) if llm else None
+        conversation_engine = ConversationEngine(clinic, scheduler, clock, ai=ai)
         app.state.engine = engine
         app.state.session_factory = session_factory
         app.state.scheduler = scheduler
@@ -68,6 +72,8 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         finally:
             if app.state.whatsapp_client is not None:
                 app.state.whatsapp_client.close()
+            if llm is not None:
+                llm.close()
             engine.dispose()
 
     app = FastAPI(
@@ -116,4 +122,23 @@ def _whatsapp_client(settings: Settings) -> WhatsAppClient | None:
         token=settings.whatsapp_token.get_secret_value(),  # type: ignore[union-attr]
         phone_number_id=settings.whatsapp_phone_number_id,  # type: ignore[arg-type]
         api_version=settings.whatsapp_api_version,
+    )
+
+
+def _llm_client(settings: Settings) -> OpenAICompatibleClient | None:
+    if not settings.ai_enabled:
+        return None
+    return OpenAICompatibleClient(
+        base_url=settings.llm_base_url,
+        api_key=settings.llm_api_key.get_secret_value(),  # type: ignore[union-attr]
+        model=settings.llm_model,
+        timeout_seconds=settings.llm_timeout_seconds,
+    )
+
+
+def _ai_limits(settings: Settings) -> AILimits:
+    return AILimits(
+        max_question_chars=settings.llm_max_question_chars,
+        calls_per_contact_per_hour=settings.llm_calls_per_contact_per_hour,
+        daily_cap=settings.llm_daily_cap,
     )

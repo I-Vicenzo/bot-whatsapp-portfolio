@@ -152,7 +152,8 @@ async function send(text, shown = text) {
       method: "POST",
       body: JSON.stringify({ contact: state.contact, text: message }),
     });
-    for (const reply of result.replies) addMessage("bot", reply.text);
+    const author = result.debug?.source === "ai" ? "ai" : "bot";
+    for (const reply of result.replies) addMessage(author, reply.text);
     setOptions(result.replies.at(-1));
     setDebug(result.debug);
     state.lastId = Math.max(state.lastId, result.last_message_id);

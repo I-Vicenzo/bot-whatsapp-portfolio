@@ -232,3 +232,25 @@ class Message(Base):
     text: Mapped[str] = mapped_column(Text)
     external_id: Mapped[str | None] = mapped_column(String(128), unique=True)
     created_at: Mapped[datetime] = mapped_column(LocalDateTime)
+
+
+class LLMOutcome(StrEnum):
+    ANSWERED = "answered"
+    HANDOFF = "handoff"
+    ERROR = "error"
+
+
+class LLMCall(Base):
+    __tablename__ = "llm_calls"
+    __table_args__ = (
+        CheckConstraint("latency_ms >= 0", name="latency_non_negative"),
+        CheckConstraint(_in("outcome", LLMOutcome), name="outcome_valid"),
+        Index("ix_llm_calls_conversation_id_created_at", "conversation_id", "created_at"),
+        Index("ix_llm_calls_created_at", "created_at"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    conversation_id: Mapped[int] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"))
+    created_at: Mapped[datetime] = mapped_column(LocalDateTime)
+    latency_ms: Mapped[int]
+    outcome: Mapped[str] = mapped_column(String(16))

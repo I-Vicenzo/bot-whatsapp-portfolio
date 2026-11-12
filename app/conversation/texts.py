@@ -89,6 +89,11 @@ HANDOFF_URGENT = (
     "mais próximo.\n\nAvisei nossa equipe com prioridade; alguém vai responder por aqui."
 )
 BACK_FROM_HANDOFF = "Tudo bem, voltei a atender por aqui."
+AI_HANDOFF_REASON = "Pergunta sem resposta nos dados da clínica"
+AI_HANDOFF = (
+    "Não tenho essa informação aqui, então chamei alguém da nossa equipe para te responder. "
+    "Se preferir, digite *menu* para ver o que eu consigo resolver."
+)
 
 
 # --- informações -------------------------------------------------------------------------
