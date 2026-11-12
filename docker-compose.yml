@@ -1,0 +1,17 @@
+# `docker compose up` sobe o simulador em http://localhost:8000 (modo demo, sem configurar nada).
+# Para ligar WhatsApp/IA, crie um .env a partir do .env.example.
+services:
+  app:
+    build: .
+    image: bot-whatsapp-portfolio
+    ports:
+      - "8000:8000"
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - app-data:/app/var # banco SQLite persistente
+    restart: unless-stopped
+
+volumes:
+  app-data:

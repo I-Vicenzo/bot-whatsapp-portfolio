@@ -1,0 +1,15 @@
+.git
+.github
+.venv
+.env
+.env.*
+!.env.example
+var
+tests
+docs
+.playwright-mcp
+**/__pycache__
+.pytest_cache
+.ruff_cache
+.coverage
+htmlcov

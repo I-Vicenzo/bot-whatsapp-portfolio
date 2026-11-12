@@ -218,18 +218,18 @@ Observações:
 
 ### Fase 2: API e simulador web
 
-- [ ] `ConversationService`: ponto único de entrada para todos os canais (seção 3)
-- [ ] API do simulador (rotas da seção 3); resposta inclui depuração: estado, intenção e origem (regra, FAQ, IA, atendente)
-- [ ] Tela do simulador:
+- [x] `ConversationService`: ponto único de entrada para todos os canais (seção 3)
+- [x] API do simulador (rotas da seção 3); resposta inclui depuração: estado, intenção e origem (regra, FAQ, IA, atendente)
+- [x] Tela do simulador:
   - chat com botões para as opções
   - número fictício editável (duas abas = dois clientes, útil para mostrar a disputa por horário)
   - reiniciar conversa e cenários prontos em um clique (agendar, convênio, pergunta livre, pedir atendente)
   - painel "por dentro do bot" (estado, intenção, origem da resposta)
   - faixa "dados fictícios" e status de WhatsApp/IA (`/api/status`)
-- [ ] Identidade visual mínima vinda do YAML (nome e cor de destaque), usada no simulador e no painel
-- [ ] Dados de demonstração: consultas de exemplo carregadas no primeiro start
-- [ ] Dockerfile + docker-compose mínimos (volume para o SQLite)
-- [ ] Testes de API (TestClient)
+- [x] Identidade visual mínima vinda do YAML (nome e cor de destaque), usada no simulador e no painel
+- [x] Dados de demonstração: consultas de exemplo carregadas no primeiro start
+- [x] Dockerfile + docker-compose mínimos (volume para o SQLite)
+- [x] Testes de API (TestClient)
 
 **Pronto quando:** `docker compose up` sem `.env` → simulador funcionando em `http://localhost:8000`.
 
@@ -299,7 +299,7 @@ Observações:
 - [ ] Deduplicação garantida pelo banco (índice único no id externo)
 - [ ] Segredos só em variáveis de ambiente; `.env` no `.gitignore`; `.env.example` sem valores; tokens nunca logados; telefones mascarados nos logs
 - [ ] Painel: Argon2; cookie HttpOnly + SameSite (+ Secure em produção); CSRF mitigado (SameSite + corpo JSON + checagem de `Origin`); limite de tentativas de login; em produção, recusa iniciar com senha padrão
-- [ ] Simulador exposto: rate limit por IP, tamanho máximo de mensagem, teto de chamadas à IA
+- [ ] Simulador exposto: rate limit por IP, tamanho máximo de mensagem (feitos na Fase 2), teto de chamadas à IA
 - [ ] XSS: conteúdo vindo de cliente nunca vai para `innerHTML`
 - [ ] IA sem ferramentas nem ações, com contexto só de dados públicos da clínica: uma injeção de prompt não agenda, não cancela e não expõe dados de outros pacientes
 - [ ] Container não-root; dependências travadas no `uv.lock`
