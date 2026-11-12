@@ -176,10 +176,10 @@ Observações:
 
 ### Fase 0: Fundação
 
-- [ ] `git init`, `.gitignore`, licença MIT; repositório público no GitHub
+- [x] `git init`, `.gitignore`, licença MIT; repositório público no GitHub ([I-Vicenzo/bot-whatsapp-portfolio](https://github.com/I-Vicenzo/bot-whatsapp-portfolio))
 - [x] Projeto `uv` (Python 3.14) com dependências base; `ruff` e `pytest` configurados no `pyproject.toml`
 - [x] Esqueleto `app/` com `create_app()`, `config.py` (Settings + `.env.example`) e `GET /health`
-- [ ] CI no GitHub Actions: `ruff check`, `ruff format --check`, `pytest`
+- [x] CI no GitHub Actions: `ruff check`, `ruff format --check`, `pytest`
 
 **Pronto quando:** `uv run pytest` e `uv run ruff check` passam localmente e no CI.
 
