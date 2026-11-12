@@ -12,9 +12,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.clock import Clock
-from app.conversation.engine import ConversationEngine, Source
+from app.conversation import texts
+from app.conversation.engine import ConversationEngine, EngineResult, Source
 from app.conversation.reply import Reply
-from app.db.models import Author, Channel, Conversation, Message
+from app.db.models import Author, Channel, Conversation, ConversationStatus, Message
 
 
 @dataclass
@@ -55,17 +56,24 @@ class ConversationService:
         *,
         display_name: str | None = None,
         external_id: str | None = None,
+        unsupported_kind: str | None = None,
     ) -> InboundResult:
+        """Processa uma mensagem do cliente. `unsupported_kind` (ex.: "audio") registra a
+        mensagem sem passar pelo motor e responde que só entendemos texto."""
         with self.session_factory.begin() as session:
             conversation = self.get_or_create(session, channel, contact)
             if display_name:
                 conversation.display_name = display_name
 
-            inbound = self._add_message(session, conversation, Author.CUSTOMER, text, external_id)
+            stored = f"[mensagem do tipo {unsupported_kind}]" if unsupported_kind else text
+            inbound = self._add_message(session, conversation, Author.CUSTOMER, stored, external_id)
             if inbound is None:
                 return InboundResult(conversation.id, duplicate=True)
 
-            result = self.engine.handle(session, conversation, text)
+            if unsupported_kind:
+                result = self._unsupported(conversation)
+            else:
+                result = self.engine.handle(session, conversation, text)
             ids = [inbound.id]
             for reply in result.replies:
                 message = self._add_message(session, conversation, Author.BOT, reply.render())
@@ -83,6 +91,12 @@ class ConversationService:
                     source=str(result.source if result.replies else Source.SILENT),
                 ),
             )
+
+    def _unsupported(self, conversation: Conversation) -> EngineResult:
+        conversation.last_inbound_at = self.clock.local_now()  # abre a janela de 24 h
+        if conversation.status != ConversationStatus.BOT:
+            return EngineResult([], source=Source.SILENT)  # o atendente vê o registro
+        return EngineResult([Reply(texts.UNSUPPORTED_MESSAGE)], "unsupported")
 
     def get_or_create(self, session: Session, channel: Channel, contact: str) -> Conversation:
         conversation = session.scalar(

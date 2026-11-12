@@ -14,6 +14,8 @@ from fastapi.staticfiles import StaticFiles
 
 from app import __version__
 from app.channels import simulator
+from app.channels.whatsapp import router as whatsapp
+from app.channels.whatsapp.client import WhatsAppClient
 from app.clinic import load_clinic
 from app.clock import Clock, SystemClock
 from app.config import Settings, get_settings
@@ -60,9 +62,12 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         app.state.simulator_limiter = RateLimiter(
             settings.simulator_rate_limit_per_minute, window_seconds=60
         )
+        app.state.whatsapp_client = _whatsapp_client(settings)
         try:
             yield
         finally:
+            if app.state.whatsapp_client is not None:
+                app.state.whatsapp_client.close()
             engine.dispose()
 
     app = FastAPI(
@@ -94,6 +99,7 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         }
 
     app.include_router(simulator.router)
+    app.include_router(whatsapp.router)
 
     @app.get("/", include_in_schema=False)
     def simulator_page() -> FileResponse:
@@ -101,3 +107,13 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
 
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
     return app
+
+
+def _whatsapp_client(settings: Settings) -> WhatsAppClient | None:
+    if not settings.whatsapp_enabled:
+        return None
+    return WhatsAppClient(
+        token=settings.whatsapp_token.get_secret_value(),  # type: ignore[union-attr]
+        phone_number_id=settings.whatsapp_phone_number_id,  # type: ignore[arg-type]
+        api_version=settings.whatsapp_api_version,
+    )

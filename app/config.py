@@ -30,7 +30,7 @@ class Settings(BaseSettings):
     whatsapp_phone_number_id: str | None = None
     whatsapp_app_secret: SecretStr | None = None
     whatsapp_verify_token: SecretStr | None = None
-    whatsapp_api_version: str = "v23.0"
+    whatsapp_api_version: str = "v26.0"
 
     llm_enabled: bool = False
     llm_base_url: str = "https://api.groq.com/openai/v1"

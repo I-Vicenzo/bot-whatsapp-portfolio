@@ -245,3 +245,10 @@ def confirm_cancel(appointment: Appointment) -> str:
 CANCELLED = "Consulta cancelada. O horário foi liberado. " + BACK_TO_MENU
 CANCEL_KEPT = "Tudo bem, sua consulta continua marcada. " + BACK_TO_MENU
 CANCEL_NOT_FOUND = "Não encontrei essa consulta: ela pode já ter sido cancelada. " + BACK_TO_MENU
+
+
+# --- canais ------------------------------------------------------------------------------
+
+UNSUPPORTED_MESSAGE = (
+    "Por enquanto só consigo ler mensagens de texto. Pode escrever sua dúvida? " + BACK_TO_MENU
+)
