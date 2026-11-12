@@ -21,3 +21,6 @@ var/
 .idea/
 .DS_Store
 Thumbs.db
+
+# Saídas do Playwright MCP (capturas locais)
+.playwright-mcp/

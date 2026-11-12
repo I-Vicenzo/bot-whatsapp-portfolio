@@ -62,6 +62,16 @@ def test_full_booking_through_api(client: TestClient, app: object) -> None:
         assert session.scalar(select(func.count(Appointment.id))) == 1
 
 
+def test_yes_no_buttons_send_their_label(client: TestClient) -> None:
+    for text in ["agendar cardio", "segunda", "10h"]:
+        say(client, text)
+    reply = say(client, "Maria Silva")["replies"][-1]
+    assert reply["options"] == ["Sim", "Não"]
+    assert reply["numbered"] is False
+    # O simulador envia o rótulo de opções não numeradas.
+    assert "Consulta confirmada" in say(client, reply["options"][0])["replies"][0]["text"]
+
+
 def test_history_and_polling(client: TestClient) -> None:
     first = say(client, "oi")
     history = client.get("/api/simulator/messages", params={"contact": CONTACT}).json()

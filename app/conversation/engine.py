@@ -48,6 +48,8 @@ from app.scheduling import (
 
 FLOW_EXPIRATION = timedelta(minutes=30)
 MAX_DAY_OPTIONS = 7
+# Botões de sim/não enviam o próprio texto (o texto da pergunta já pede "sim" ou "não").
+YES_NO = ("Sim", "Não")
 UNKNOWN_BEFORE_OFFER = 3
 
 MENU_ACTIONS = (
@@ -427,7 +429,7 @@ class ConversationEngine:
         info, _ = self._spec(turn)
         starts_at = datetime.fromisoformat(turn.ctx["starts_at"])
         return Reply(
-            texts.confirm_booking(info, starts_at, turn.ctx["patient_name"]), ("Sim", "Não")
+            texts.confirm_booking(info, starts_at, turn.ctx["patient_name"]), YES_NO, numbered=False
         )
 
     def _on_confirm(self, turn: _Turn) -> EngineResult:
@@ -501,7 +503,7 @@ class ConversationEngine:
         turn.ctx = {"appointment_id": appointment.id}
         turn.go(State.CANCEL_CONFIRM)
         return EngineResult(
-            [Reply(texts.confirm_cancel(appointment), ("Sim", "Não"))], Intent.CANCEL
+            [Reply(texts.confirm_cancel(appointment), YES_NO, numbered=False)], Intent.CANCEL
         )
 
     def _cancel_target(self, turn: _Turn) -> Appointment:

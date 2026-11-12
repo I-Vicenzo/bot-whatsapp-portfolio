@@ -102,7 +102,10 @@ function setOptions(reply) {
     button.type = "button";
     button.textContent = label;
     // Opções numeradas aceitam o número; as demais (horários) aceitam o próprio texto.
-    button.addEventListener("click", () => send(reply.numbered ? String(index + 1) : label));
+    // O balão mostra o rótulo; o bot recebe o número, como no WhatsApp.
+    button.addEventListener("click", () =>
+      send(reply.numbered ? String(index + 1) : label, label),
+    );
     els.options.append(button);
   });
 }
@@ -137,13 +140,13 @@ async function api(path, options = {}) {
   return response.status === 204 ? null : response.json();
 }
 
-async function send(text) {
+async function send(text, shown = text) {
   const message = text.trim();
   if (!message || state.busy) return;
   state.busy = true;
   els.send.disabled = true;
   els.options.replaceChildren();
-  addMessage("customer", message);
+  addMessage("customer", shown.trim());
   try {
     const result = await api("/api/simulator/messages", {
       method: "POST",
