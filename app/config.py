@@ -32,6 +32,10 @@ class Settings(BaseSettings):
     whatsapp_verify_token: SecretStr | None = None
     whatsapp_api_version: str = "v26.0"
     whatsapp_interactive: bool = True  # botões e listas; false = só texto numerado
+    reminders_enabled: bool = False  # exige template aprovado na Meta
+    whatsapp_reminder_template: str = "lembrete_consulta"
+    whatsapp_reminder_language: str = "pt_BR"
+    reminder_hours_before: int = 24
 
     llm_enabled: bool = False
     llm_base_url: str = "https://api.groq.com/openai/v1"

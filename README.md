@@ -34,6 +34,7 @@ Para adaptar a outro negócio, edite [data/clinica.yaml](data/clinica.yaml) (nom
 - Áudios do WhatsApp transcritos (Whisper via Groq) e tratados como texto, se habilitado
 - Agendamento guiado: especialidade, dia (aceita "amanhã", "sexta", "15/11"), horário livre ("14h", "14:30"), nome e confirmação
 - Consultar e cancelar as próprias consultas
+- Lembrete pelo WhatsApp 24 h antes da consulta (template aprovado na Meta)
 - "apagar meus dados" (LGPD): com confirmação, cancela consultas futuras, anonimiza o histórico e apaga a conversa
 - Perguntas sobre endereço, horário, convênios, valores e FAQ, inclusive no meio de um agendamento, sem perder o andamento
 - "atendente" pausa o bot e coloca a conversa na fila; "urgente" faz o mesmo com prioridade e orienta ligar 192 (SAMU)
@@ -150,7 +151,6 @@ Todos os dados são **fictícios**: clínica, profissionais, endereço, telefone
 
 - Demo pública hospedada
 - PostgreSQL via perfil do docker-compose (triggers em PL/pgSQL)
-- Lembrete 24 h antes da consulta (template aprovado)
 
 Roteiro completo e decisões em [PLANO.md](PLANO.md).
 

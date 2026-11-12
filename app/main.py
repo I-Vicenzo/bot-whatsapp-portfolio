@@ -3,6 +3,8 @@
 Rodar: `uv run uvicorn app.main:create_app --factory --reload`.
 """
 
+import asyncio
+import contextlib
 import logging
 import secrets
 from collections.abc import AsyncIterator
@@ -22,6 +24,7 @@ from app.ai.transcription import Transcriber
 from app.channels import simulator
 from app.channels.whatsapp import router as whatsapp
 from app.channels.whatsapp.client import WhatsAppClient, WhatsAppError
+from app.channels.whatsapp.reminders import ReminderSettings, reminder_loop
 from app.channels.whatsapp.router import WhatsAppOptions
 from app.clinic import load_clinic
 from app.clock import Clock, SystemClock
@@ -86,9 +89,27 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         app.state.simulator_limiter = RateLimiter(
             settings.simulator_rate_limit_per_minute, window_seconds=60
         )
+        reminders = None
+        if whatsapp_client is not None and settings.reminders_enabled:
+            reminders = asyncio.create_task(
+                reminder_loop(
+                    session_factory,
+                    whatsapp_client,
+                    clock,
+                    ReminderSettings(
+                        template=settings.whatsapp_reminder_template,
+                        language=settings.whatsapp_reminder_language,
+                        hours_before=settings.reminder_hours_before,
+                    ),
+                )
+            )
         try:
             yield
         finally:
+            if reminders is not None:
+                reminders.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await reminders
             if app.state.whatsapp_client is not None:
                 app.state.whatsapp_client.close()
             if llm is not None:

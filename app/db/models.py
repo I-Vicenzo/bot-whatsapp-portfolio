@@ -169,6 +169,7 @@ class Appointment(Base):
     channel: Mapped[str] = mapped_column(String(16))
     created_at: Mapped[datetime] = mapped_column(LocalDateTime)
     cancelled_at: Mapped[datetime | None] = mapped_column(LocalDateTime)
+    reminder_sent_at: Mapped[datetime | None] = mapped_column(LocalDateTime)
 
     specialty: Mapped[Specialty] = relationship(lazy="joined")
 

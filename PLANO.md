@@ -294,7 +294,7 @@ Observações:
 - [x] Botões e listas interativas do WhatsApp (até 3 opções curtas viram botões, até 10 numeradas viram lista; o resto segue como texto)
 - [x] Transcrição de áudio (Whisper via Groq): áudio é muito usado no WhatsApp no Brasil (`AUDIO_TRANSCRIPTION_ENABLED=true`; falha ou desligado = resposta padrão)
 - [ ] PostgreSQL via perfil do docker-compose (triggers em PL/pgSQL)
-- [ ] Lembrete 24 h antes da consulta (exige template aprovado)
+- [x] Lembrete 24 h antes da consulta (exige template aprovado): ciclo em background envia template para consultas do WhatsApp, sem repetir. **Pendência (usuário):** cadastrar e aprovar o template `lembrete_consulta` na Meta (texto em `docs/whatsapp-setup.md`) e ligar `REMINDERS_ENABLED`
 - [x] Bloqueios de agenda (feriados, férias de profissional): `closures` no YAML, tabela `schedule_blocks` e trigger que recusa consulta em dia bloqueado
 - [x] Perfil Ollama no compose (IA local, sem chave): `docker-compose.ollama.yml` (override). Validado com `docker compose config`; a execução completa (download de vários GB) não foi testada nesta máquina
 - [x] Comando "apagar meus dados" (LGPD): com confirmação; cancela consultas futuras, anonimiza o histórico e apaga a conversa

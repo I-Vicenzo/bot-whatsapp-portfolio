@@ -70,6 +70,28 @@ class WhatsAppClient:
         messages = data.get("messages") or [{}]
         return messages[0].get("id")
 
+    def send_template(self, to: str, name: str, language: str, parameters: list[str]) -> str | None:
+        """Mensagem de template aprovado (única permitida fora da janela de 24 h)."""
+        body = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to,
+            "type": "template",
+            "template": {
+                "name": name,
+                "language": {"code": language},
+                "components": [
+                    {
+                        "type": "body",
+                        "parameters": [{"type": "text", "text": p} for p in parameters],
+                    }
+                ],
+            },
+        }
+        data = self._post(body, to)
+        messages = data.get("messages") or [{}]
+        return messages[0].get("id")
+
     def send_reply(self, to: str, reply: Reply, *, interactive: bool = True) -> str | None:
         """Botões ou lista quando cabem; senão, texto com a lista numerada."""
         payload = build_interactive(reply) if interactive else None

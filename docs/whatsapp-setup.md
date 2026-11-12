@@ -76,6 +76,20 @@ Anote a URL pública gerada (ex.: `https://abc-123.trycloudflare.com`).
 
 Do celular cadastrado, mande "oi" para o número de teste. O bot responde com o menu. Toda a conversa também aparece no banco e, a partir da Fase 5, no painel do atendente.
 
+## Lembrete antes da consulta (opcional)
+
+Fora da janela de 24 h a Meta só entrega mensagens de **template aprovado**. Para ligar o lembrete:
+
+1. Em **WhatsApp → Modelos de mensagem**, crie um modelo de categoria **Utilidade**, idioma Português (BR), com o nome `lembrete_consulta` e o corpo:
+
+   ```text
+   Olá, {{1}}! Lembrete: sua consulta de {{2}} é {{3}} às {{4}}. Se não puder vir, responda "cancelar".
+   ```
+
+2. Depois da aprovação, no `.env`: `REMINDERS_ENABLED=true` (e `WHATSAPP_REMINDER_TEMPLATE` se usar outro nome).
+
+A cada 5 minutos o app envia o lembrete das consultas marcadas pelo WhatsApp que começam nas próximas 24 h (`REMINDER_HOURS_BEFORE`) e ainda não foram lembradas. Falhas são registradas no log e tentadas de novo no ciclo seguinte. Só uma instância do app deve ter os lembretes ligados.
+
 ## Problemas comuns
 
 | Sintoma | Causa provável |
