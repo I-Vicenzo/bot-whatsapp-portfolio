@@ -151,6 +151,25 @@ class Scheduler:
             raise error from exc
         return appointment
 
+    def cancel_by_staff(self, session: Session, appointment_id: int) -> Appointment:
+        """Cancelamento pelo painel: qualquer consulta confirmada e futura."""
+        appointment = session.scalar(
+            select(Appointment).where(
+                Appointment.id == appointment_id,
+                Appointment.status == AppointmentStatus.CONFIRMED,
+                Appointment.starts_at >= self.clock.local_now(),
+            )
+        )
+        if appointment is None:
+            raise AppointmentNotFound(str(appointment_id))
+        return self._mark_cancelled(session, appointment)
+
+    def _mark_cancelled(self, session: Session, appointment: Appointment) -> Appointment:
+        appointment.status = AppointmentStatus.CANCELLED
+        appointment.cancelled_at = self.clock.local_now()
+        session.flush()
+        return appointment
+
     def cancel(self, session: Session, appointment_id: int, phone: str) -> Appointment:
         """Cancela uma consulta futura do próprio telefone. Cancelar libera o horário."""
         appointment = session.scalar(
@@ -163,7 +182,4 @@ class Scheduler:
         )
         if appointment is None:
             raise AppointmentNotFound(str(appointment_id))
-        appointment.status = AppointmentStatus.CANCELLED
-        appointment.cancelled_at = self.clock.local_now()
-        session.flush()
-        return appointment
+        return self._mark_cancelled(session, appointment)

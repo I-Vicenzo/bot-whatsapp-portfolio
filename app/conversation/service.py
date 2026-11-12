@@ -5,7 +5,10 @@ pelo id externo), roda o motor e grava as respostas. O simulador, portanto, exer
 a mesma lógica de produção.
 """
 
+import logging
+from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import timedelta
 
 from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
@@ -15,7 +18,28 @@ from app.clock import Clock
 from app.conversation import texts
 from app.conversation.engine import ConversationEngine, EngineResult, Source
 from app.conversation.reply import Reply
-from app.db.models import Author, Channel, Conversation, ConversationStatus, Message
+from app.conversation.states import State
+from app.db.models import Author, Channel, Conversation, ConversationStatus, Message, Priority
+
+logger = logging.getLogger(__name__)
+
+# Fora desta janela desde a última mensagem do cliente, a Meta só aceita templates aprovados.
+WHATSAPP_WINDOW = timedelta(hours=24)
+
+# Envia texto para um contato no canal. Canais sem envio ativo (simulador) entregam por polling.
+Sender = Callable[[str, str], None]
+
+
+class ConversationNotFound(Exception):
+    pass
+
+
+class WindowClosed(Exception):
+    """Janela de 24 h do WhatsApp fechada: só templates aprovados podem ser enviados."""
+
+
+class DeliveryError(Exception):
+    """O canal não aceitou a mensagem."""
 
 
 @dataclass
@@ -43,10 +67,12 @@ class ConversationService:
         session_factory: sessionmaker[Session],
         engine: ConversationEngine,
         clock: Clock,
+        senders: dict[Channel, Sender] | None = None,
     ) -> None:
         self.session_factory = session_factory
         self.engine = engine
         self.clock = clock
+        self.senders = senders or {}
 
     def receive(
         self,
@@ -167,3 +193,65 @@ class ConversationService:
             )
             if conversation is not None:
                 session.delete(conversation)
+
+    # --- atendimento humano (painel) -------------------------------------------------------
+
+    def window_open(self, conversation: Conversation) -> bool:
+        if conversation.channel != Channel.WHATSAPP:
+            return True
+        last = conversation.last_inbound_at
+        return last is not None and self.clock.local_now() - last < WHATSAPP_WINDOW
+
+    def _get(self, session: Session, conversation_id: int) -> Conversation:
+        conversation = session.get(Conversation, conversation_id)
+        if conversation is None:
+            raise ConversationNotFound(str(conversation_id))
+        return conversation
+
+    def _deliver(self, conversation: Conversation, text: str) -> None:
+        sender = self.senders.get(Channel(conversation.channel))
+        if sender is None:
+            return  # simulador: o cliente busca por polling
+        sender(conversation.contact, text)
+
+    def assign(self, conversation_id: int, user_id: int) -> None:
+        with self.session_factory.begin() as session:
+            conversation = self._get(session, conversation_id)
+            conversation.status = ConversationStatus.HUMAN
+            conversation.assigned_to = user_id
+
+    def agent_reply(self, conversation_id: int, user_id: int, text: str) -> Message:
+        """Entrega a resposta pelo canal da conversa e grava com autor `agent`. Responder
+        também assume a conversa (o bot para de responder)."""
+        with self.session_factory.begin() as session:
+            conversation = self._get(session, conversation_id)
+            if not self.window_open(conversation):
+                raise WindowClosed(str(conversation_id))
+            self._deliver(conversation, text)  # falha aqui: nada é gravado
+            conversation.status = ConversationStatus.HUMAN
+            if conversation.assigned_to is None:
+                conversation.assigned_to = user_id
+            message = self._add_message(session, conversation, Author.AGENT, text)
+            if message is None:  # pragma: no cover - sem external_id não há duplicata
+                raise RuntimeError("mensagem do atendente não gravada")
+            return message
+
+    def release(self, conversation_id: int) -> None:
+        """Devolve a conversa ao bot e avisa o cliente (se o canal permitir)."""
+        with self.session_factory.begin() as session:
+            conversation = self._get(session, conversation_id)
+            conversation.status = ConversationStatus.BOT
+            conversation.priority = Priority.NORMAL
+            conversation.assigned_to = None
+            conversation.handoff_reason = None
+            conversation.handoff_at = None
+            conversation.state = State.MENU
+            conversation.context = {}
+            conversation.unknown_count = 0
+            if self.window_open(conversation):
+                try:
+                    self._deliver(conversation, texts.RELEASED)
+                except DeliveryError:
+                    logger.warning("Aviso de fim de atendimento não entregue")
+                    return
+                self._add_message(session, conversation, Author.BOT, texts.RELEASED)

@@ -208,6 +208,7 @@ class Conversation(Base):
         String(8), default=Priority.NORMAL, server_default="normal"
     )
     handoff_reason: Mapped[str | None] = mapped_column(String(200))
+    handoff_at: Mapped[datetime | None] = mapped_column(LocalDateTime)
     assigned_to: Mapped[int | None] = mapped_column(ForeignKey("users.id"))
     unknown_count: Mapped[int] = mapped_column(default=0, server_default="0")
     last_inbound_at: Mapped[datetime | None] = mapped_column(LocalDateTime)

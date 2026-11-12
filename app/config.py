@@ -41,6 +41,19 @@ class Settings(BaseSettings):
     llm_calls_per_contact_per_hour: int = 10
     llm_daily_cap: int = 200
 
+    def production_problems(self) -> list[str]:
+        """Configurações inseguras que impedem iniciar em produção."""
+        if self.app_env is not AppEnv.PRODUCTION:
+            return []
+        problems = []
+        password = self.admin_password.get_secret_value() if self.admin_password else ""
+        if len(password) < 12 or password == "admin":  # noqa: S105 - recusa a senha padrão
+            problems.append("ADMIN_PASSWORD deve ter ao menos 12 caracteres e não ser a padrão")
+        secret = self.session_secret.get_secret_value() if self.session_secret else ""
+        if len(secret) < 32:
+            problems.append("SESSION_SECRET deve ter ao menos 32 caracteres")
+        return problems
+
     @property
     def whatsapp_enabled(self) -> bool:
         """WhatsApp só liga com todas as credenciais preenchidas."""

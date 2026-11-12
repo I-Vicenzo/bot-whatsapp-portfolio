@@ -148,6 +148,7 @@ class ConversationEngine:
             conversation.status = ConversationStatus.BOT
             conversation.priority = Priority.NORMAL
             conversation.handoff_reason = None
+            conversation.handoff_at = None
             self._reset(turn)
             return EngineResult([Reply(texts.BACK_FROM_HANDOFF), self._menu()], Intent.MENU)
         return EngineResult([], source=Source.SILENT)
@@ -236,6 +237,7 @@ class ConversationEngine:
         conversation = turn.conversation
         conversation.status = ConversationStatus.WAITING_HUMAN
         conversation.priority = Priority.URGENT if urgent else Priority.NORMAL
+        conversation.handoff_at = self.clock.local_now()
         conversation.handoff_reason = reason or (
             "Urgência informada pelo cliente" if urgent else "Cliente pediu atendente"
         )

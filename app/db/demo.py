@@ -1,11 +1,16 @@
-"""Dados de demonstração: consultas de exemplo para a agenda não começar vazia."""
+"""Dados de demonstração: agenda e painel não começam vazios."""
+
+from typing import TYPE_CHECKING
 
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
 from app.clinic import ClinicData
-from app.db.models import Appointment, Channel
+from app.db.models import Appointment, Channel, Conversation
 from app.scheduling import Scheduler, SchedulingError
+
+if TYPE_CHECKING:
+    from app.conversation.service import ConversationService
 
 # Telefones claramente fictícios (DDD 00).
 DEMO_PATIENTS = (
@@ -42,3 +47,26 @@ def seed_demo_appointments(session: Session, clinic: ClinicData, scheduler: Sche
                 continue
             created += 1
     return created
+
+
+DEMO_CONVERSATIONS = (
+    ("5500900000101", "Fernanda Lopes", ("Oi", "Queria falar com um atendente, por favor")),
+    (
+        "5500900000102",
+        "Paulo Henrique",
+        ("Boa tarde", "É urgente, minha filha está com febre alta desde ontem"),
+    ),
+    ("5500900000103", "Luciana Prado", ("Olá", "Quanto custa a consulta de dermatologia?")),
+)
+
+
+def seed_demo_conversations(service: ConversationService) -> int:
+    """Conversas de exemplo no simulador (uma na fila, uma urgente), só com o banco vazio.
+    Passam pelo mesmo serviço do bot, então estado e fila ficam coerentes."""
+    with service.session_factory() as session:
+        if session.scalar(select(func.count(Conversation.id))):
+            return 0
+    for contact, name, messages in DEMO_CONVERSATIONS:
+        for text in messages:
+            service.receive(Channel.SIMULATOR, contact, text, display_name=name)
+    return len(DEMO_CONVERSATIONS)

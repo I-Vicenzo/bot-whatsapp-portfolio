@@ -4,6 +4,7 @@ Rodar: `uv run uvicorn app.main:create_app --factory --reload`.
 """
 
 import logging
+import secrets
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -13,19 +14,22 @@ from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
 from app import __version__
+from app.admin import router as admin
+from app.admin.auth import SessionCodec, ensure_initial_user
 from app.ai.client import OpenAICompatibleClient
 from app.ai.responder import AILimits, AIResponder
 from app.channels import simulator
 from app.channels.whatsapp import router as whatsapp
-from app.channels.whatsapp.client import WhatsAppClient
+from app.channels.whatsapp.client import WhatsAppClient, WhatsAppError
 from app.clinic import load_clinic
 from app.clock import Clock, SystemClock
 from app.config import Settings, get_settings
 from app.conversation import ConversationEngine
-from app.conversation.service import ConversationService
-from app.db.demo import seed_demo_appointments
+from app.conversation.service import ConversationService, DeliveryError, Sender
+from app.db.demo import seed_demo_appointments, seed_demo_conversations
 from app.db.engine import make_engine, make_session_factory
 from app.db.migrate import run_migrations
+from app.db.models import Channel
 from app.db.sync import sync_clinic
 from app.ratelimit import RateLimiter
 from app.scheduling import Scheduler
@@ -36,6 +40,9 @@ logger = logging.getLogger(__name__)
 
 def create_app(settings: Settings | None = None, clock: Clock | None = None) -> FastAPI:
     settings = settings or get_settings()
+    problems = settings.production_problems()
+    if problems:
+        raise RuntimeError("Configuração insegura para produção: " + "; ".join(problems))
     # Falha cedo: arquivo da clínica inválido impede a criação da aplicação.
     clinic = load_clinic(settings.clinic_data_path)
     clock = clock or SystemClock(clinic.clinic.tz)
@@ -48,6 +55,7 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         scheduler = Scheduler(clinic, clock)
         with session_factory.begin() as session:
             sync_clinic(session, clinic)
+            ensure_initial_user(session, settings, clock)
             if settings.demo_seed:
                 created = seed_demo_appointments(session, clinic, scheduler)
                 if created:
@@ -60,13 +68,18 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         app.state.session_factory = session_factory
         app.state.scheduler = scheduler
         app.state.conversation_engine = conversation_engine
-        app.state.conversation_service = ConversationService(
-            session_factory, conversation_engine, clock
-        )
+        whatsapp_client = _whatsapp_client(settings)
+        app.state.whatsapp_client = whatsapp_client
+        senders: dict[Channel, Sender] = {}
+        if whatsapp_client is not None:
+            senders[Channel.WHATSAPP] = _whatsapp_sender(whatsapp_client)
+        service = ConversationService(session_factory, conversation_engine, clock, senders)
+        app.state.conversation_service = service
+        if settings.demo_seed and seed_demo_conversations(service):
+            logger.info("Dados de demonstração: conversas de exemplo criadas")
         app.state.simulator_limiter = RateLimiter(
             settings.simulator_rate_limit_per_minute, window_seconds=60
         )
-        app.state.whatsapp_client = _whatsapp_client(settings)
         try:
             yield
         finally:
@@ -86,6 +99,8 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         lifespan=lifespan,
     )
     app.state.settings = settings
+    app.state.session_codec = SessionCodec(_session_secret(settings))
+    app.state.login_limiter = RateLimiter(5, window_seconds=60)
     app.state.clinic = clinic
     app.state.clock = clock
 
@@ -106,6 +121,11 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
 
     app.include_router(simulator.router)
     app.include_router(whatsapp.router)
+    app.include_router(admin.router)
+
+    @app.get("/admin", include_in_schema=False)
+    def admin_page() -> FileResponse:
+        return FileResponse(STATIC_DIR / "admin" / "index.html")
 
     @app.get("/", include_in_schema=False)
     def simulator_page() -> FileResponse:
@@ -142,3 +162,22 @@ def _ai_limits(settings: Settings) -> AILimits:
         calls_per_contact_per_hour=settings.llm_calls_per_contact_per_hour,
         daily_cap=settings.llm_daily_cap,
     )
+
+
+def _session_secret(settings: Settings) -> str:
+    if settings.session_secret is not None:
+        return settings.session_secret.get_secret_value()
+    logger.warning(
+        "SESSION_SECRET não definido: gerado na inicialização (logins caem ao reiniciar)"
+    )
+    return secrets.token_urlsafe(32)
+
+
+def _whatsapp_sender(client: WhatsAppClient) -> Sender:
+    def send(contact: str, text: str) -> None:
+        try:
+            client.send_text(contact, text)
+        except WhatsAppError as exc:
+            raise DeliveryError(str(exc)) from exc
+
+    return send
