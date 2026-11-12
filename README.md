@@ -8,10 +8,10 @@ Bot de atendimento para uma clínica **fictícia**: informa, agenda, consulta, c
 
 ```bash
 uv sync
-uv run uvicorn app.main:app --reload
+uv run uvicorn app.main:create_app --factory --reload
 ```
 
-API em `http://localhost:8000/docs`.
+API em `http://localhost:8000/docs`. O banco SQLite é criado e migrado sozinho em `var/app.db`; os dados da clínica (fictícios) ficam em [data/clinica.yaml](data/clinica.yaml).
 
 ## Testes
 

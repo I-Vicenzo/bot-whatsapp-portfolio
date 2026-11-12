@@ -158,7 +158,7 @@ Observações:
    - `menu`, `início`, `sair`, `0` → abandona o fluxo e mostra o menu.
    - Perguntas informativas sem ambiguidade com o passo atual (endereço, convênios, valores, FAQ) → responde e repete a pergunta do passo, sem perder o agendamento em andamento.
 3. Passo atual do fluxo: espera número de opção, texto livre, data, hora ou sim/não. Entrada inválida repete a pergunta com um exemplo.
-4. Fora de fluxo: intenção por regex → FAQ do YAML → IA (se ligada) → "não entendi". Na 3ª mensagem seguida sem entendimento, oferece atendente.
+4. Fora de fluxo: opção do menu e intenções de ação (agendar, consultar, cancelar) → FAQ do YAML (antes das intenções informativas genéricas, por ser mais específico: "valor do estacionamento" é FAQ, não preço) → intenções informativas → IA (se ligada) → "não entendi". Na 3ª mensagem seguida sem entendimento, oferece atendente.
 
 **Fluxos:**
 
@@ -187,32 +187,32 @@ Observações:
 
 **1.1 Dados da clínica**
 
-- [ ] `data/clinica.yaml` com dados genéricos e fictícios: nome placeholder ("Clínica Exemplo"), endereço e telefone claramente falsos, fuso; horários por dia da semana (com pausa de almoço); 4 especialidades (clínica geral, cardiologia, dermatologia, pediatria) com profissional fictício sem CRM, valor e apelidos para reconhecimento; convênios com nomes inventados; regras de agenda (antecedência mínima, dias à frente); FAQ (palavras-chave + resposta)
-- [ ] `data/textos.yaml`: todas as mensagens do bot, com placeholders
-- [ ] Models Pydantic + carregadores; testes: arquivo inválido, texto faltando ou placeholder desconhecido impedem a inicialização com mensagem clara
+- [x] `data/clinica.yaml` com dados genéricos e fictícios: nome placeholder ("Clínica Exemplo"), endereço e telefone claramente falsos, fuso; horários por dia da semana (com pausa de almoço); 4 especialidades (clínica geral, cardiologia, dermatologia, pediatria) com profissional fictício sem CRM, valor e apelidos para reconhecimento; convênios com nomes inventados; regras de agenda (antecedência mínima, dias à frente); FAQ (palavras-chave + resposta)
+- [x] `data/textos.yaml`: todas as mensagens do bot, com placeholders
+- [x] Models Pydantic + carregadores; testes: arquivo inválido, texto faltando ou placeholder desconhecido impedem a inicialização com mensagem clara
 
 **1.2 Banco**
 
-- [ ] Engine/sessão com hooks de conexão (`foreign_keys`, WAL, `busy_timeout`, `clinic_now()`)
-- [ ] Models + migração inicial do Alembic com as constraints e triggers da seção 5; migrações aplicadas automaticamente na inicialização
-- [ ] Sincronização YAML → `specialties`, `business_hours`, `schedule_settings` na inicialização
-- [ ] Um teste por regra tentando violá-la direto no banco (início às 10:15, domingo, início às 18:00 com fechamento às 18:00, duplicado, antecedência) + cancelado libera o horário
+- [x] Engine/sessão com hooks de conexão (`foreign_keys`, WAL, `busy_timeout`, `clinic_now()`)
+- [x] Models + migração inicial do Alembic com as constraints e triggers da seção 5; migrações aplicadas automaticamente na inicialização
+- [x] Sincronização YAML → `specialties`, `business_hours`, `schedule_settings` na inicialização
+- [x] Um teste por regra tentando violá-la direto no banco (início às 10:15, domingo, início às 18:00 com fechamento às 18:00, duplicado, antecedência) + cancelado libera o horário
 
 **1.3 Agenda**
 
-- [ ] `available_days()`, `available_slots(day)`, `book()`, `list_upcoming(phone)`, `cancel(id, phone)`
-- [ ] `IntegrityError` traduzido para erros de domínio (`SlotTaken`, `OutsideBusinessHours`, `TooSoon`)
-- [ ] Teste de disputa: duas reservas para o mesmo horário → uma confirma, a outra recebe `SlotTaken`
+- [x] `available_days()`, `available_slots(day)`, `book()`, `list_upcoming(phone)`, `cancel(id, phone)`
+- [x] `IntegrityError` traduzido para erros de domínio (`SlotTaken`, `OutsideBusinessHours`, `TooSoon`)
+- [x] Teste de disputa: duas reservas para o mesmo horário → uma confirma, a outra recebe `SlotTaken`
 
 **1.4 Entendimento (NLU)**
 
-- [ ] Normalização, tabela de intenções (regex) e parsers: data (hoje, amanhã, depois de amanhã, dia da semana, `dd/mm`, `dd/mm/aaaa`, "dia 15"), hora (`14`, `14h`, `14:30`, `14h30`), nome, sim/não
-- [ ] Testes parametrizados com muitas variações (acentos, maiúsculas, erros de digitação comuns)
+- [x] Normalização, tabela de intenções (regex) e parsers: data (hoje, amanhã, depois de amanhã, dia da semana, `dd/mm`, `dd/mm/aaaa`, "dia 15"), hora (`14`, `14h`, `14:30`, `14h30`), nome, sim/não
+- [x] Testes parametrizados com muitas variações (acentos, maiúsculas, erros de digitação comuns)
 
 **1.5 Motor de conversa**
 
-- [ ] Estados, contexto persistido, textos vindos de `textos.yaml`, comandos globais e fluxos da seção 6
-- [ ] Testes de diálogo legíveis (`chat.send("oi")` → verifica resposta e estado): agendamento completo, entradas inválidas, desistência no meio, pergunta informativa no meio do fluxo, consultar, cancelar, atendente, urgência, expiração
+- [x] Estados, contexto persistido, textos vindos de `textos.yaml`, comandos globais e fluxos da seção 6
+- [x] Testes de diálogo legíveis (`chat.send("oi")` → verifica resposta e estado): agendamento completo, entradas inválidas, desistência no meio, pergunta informativa no meio do fluxo, consultar, cancelar, atendente, urgência, expiração
 
 **Pronto quando:** todos os fluxos funcionam em teste, sem HTTP; cobertura ≥ 90% em `scheduling/`, `nlu/` e `conversation/`.
 
