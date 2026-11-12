@@ -11,6 +11,9 @@ services:
         required: false
     volumes:
       - app-data:/app/var # banco SQLite persistente
+      # Dados do negócio: editar data/clinica.yaml (ou apontar para outra pasta) e reiniciar,
+      # sem rebuild. Um YAML inválido impede a subida com mensagem clara no log.
+      - ./data:/app/data:ro
     restart: unless-stopped
 
 volumes:

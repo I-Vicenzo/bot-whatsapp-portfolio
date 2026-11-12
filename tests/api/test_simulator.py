@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 from sqlalchemy import func, select
 
+from app import __version__
 from app.clock import FixedClock
 from app.config import Settings
 from app.db.models import Appointment
@@ -28,7 +29,7 @@ def test_simulator_page_and_assets(client: TestClient) -> None:
 
 def test_status_in_demo_mode(client: TestClient) -> None:
     assert client.get("/api/status").json() == {
-        "version": "0.0.0",
+        "version": __version__,
         "clinic_name": "Clínica Teste",
         "demo_mode": True,
         "whatsapp_enabled": False,

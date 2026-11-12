@@ -278,10 +278,10 @@ Observações:
 
 ### Fase 6: Entrega e vitrine
 
-- [ ] Docker final: imagem slim com uv, usuário não-root, healthcheck, volume persistente, pasta de dados montável (trocar de cliente sem rebuild); testado em máquina limpa
-- [ ] README em português (estrutura na seção 10)
-- [ ] Prints e GIF do simulador e do painel (capturados com Playwright)
-- [ ] Vídeo curto com a integração real (roteiro na seção 10)
+- [x] Docker final: imagem slim com uv, usuário não-root, healthcheck, volume persistente, pasta de dados montável (trocar de cliente sem rebuild); testado com build sem cache e volume novo
+- [x] README em português (estrutura na seção 10)
+- [x] Prints e GIF do simulador e do painel (capturados com Playwright)
+- [ ] Vídeo curto com a integração real (roteiro na seção 10). **Pendência (usuário):** depende do número de teste da Meta (Fase 3)
 - [ ] Repositório: descrição, tópicos, badge de CI, release `v1.0.0`
 
 **Pronto quando:** clone + 3 comandos → demo funcionando em poucos minutos; CI verde.
