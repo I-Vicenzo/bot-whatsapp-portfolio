@@ -45,10 +45,13 @@ Para adaptar a outro negócio, edite [data/clinica.yaml](data/clinica.yaml) (nom
 - Histórico com o autor de cada mensagem: cliente, bot, IA ou atendente
 - Resposta entregue pelo canal certo; no WhatsApp, bloqueada fora da janela de 24 h
 - Agenda com filtros e cancelamento
+- Métricas: conversas resolvidas pelo bot, pedidos de atendente, tempo até a primeira resposta da equipe, uso e latência da IA, agendamentos e cancelamentos
 
 | Simulador | Painel |
 |---|---|
 | ![Simulador com agendamento confirmado e painel "por dentro do bot"](docs/img/simulador.png) | ![Painel com conversa urgente em atendimento](docs/img/painel.png) |
+
+![Métricas do atendimento no painel](docs/img/painel-metricas.png)
 
 O simulador mostra **por dentro do bot**: estado da conversa, intenção reconhecida e origem da resposta (regra, FAQ, IA). Duas abas do navegador são dois clientes, o que permite mostrar dois clientes disputando o mesmo horário.
 

@@ -499,3 +499,69 @@ tr.cancelled td:last-child,
 tr.cancelled td:nth-last-child(2) {
   text-decoration: none;
 }
+
+/* --- métricas --- */
+
+#metrics-view {
+  max-width: 1280px;
+  margin: 0 16px 24px;
+  padding: 16px;
+}
+
+@media (min-width: 1312px) {
+  #metrics-view {
+    margin: 0 auto 24px;
+  }
+}
+
+.metrics-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.metrics-head h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.metrics-head label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 12px;
+}
+
+.tile {
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 12px 14px;
+  background: var(--bg);
+}
+
+.tile .label {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.tile .value {
+  font-size: 26px;
+  font-weight: 650;
+  margin: 2px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.tile .detail {
+  font-size: 12px;
+  color: var(--muted);
+}

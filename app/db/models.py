@@ -271,3 +271,25 @@ class ScheduleBlock(Base):
     start_date: Mapped[date]
     end_date: Mapped[date]
     reason: Mapped[str] = mapped_column(String(120))
+
+
+class Handoff(Base):
+    """Cada pedido de atendimento humano, com a primeira resposta do atendente (métricas)."""
+
+    __tablename__ = "handoffs"
+    __table_args__ = (
+        CheckConstraint(_in("priority", Priority), name="priority_valid"),
+        CheckConstraint(
+            "first_response_at IS NULL OR first_response_at >= requested_at",
+            name="response_after_request",
+        ),
+        Index("ix_handoffs_requested_at", "requested_at"),
+        Index("ix_handoffs_conversation_id", "conversation_id"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    conversation_id: Mapped[int] = mapped_column(ForeignKey("conversations.id", ondelete="CASCADE"))
+    requested_at: Mapped[datetime] = mapped_column(LocalDateTime)
+    first_response_at: Mapped[datetime | None] = mapped_column(LocalDateTime)
+    priority: Mapped[str] = mapped_column(String(8))
+    reason: Mapped[str] = mapped_column(String(200))

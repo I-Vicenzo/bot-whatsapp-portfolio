@@ -133,15 +133,16 @@ function selectTab(tab) {
   document.querySelectorAll("[data-tab]").forEach((b) => {
     b.setAttribute("aria-selected", String(b.dataset.tab === tab));
   });
-  const appointments = tab === "appointments";
-  $("conversations-view").hidden = appointments;
-  $("appointments-view").hidden = !appointments;
+  $("conversations-view").hidden = tab === "appointments" || tab === "metrics";
+  $("appointments-view").hidden = tab !== "appointments";
+  $("metrics-view").hidden = tab !== "metrics";
   refresh();
 }
 
 function refresh() {
   if (document.hidden) return;
   if (state.tab === "appointments") loadAppointments();
+  else if (state.tab === "metrics") loadMetrics();
   else loadConversations();
   updateQueueCount();
 }
@@ -342,6 +343,42 @@ async function cancelAppointment(appointment) {
 }
 
 $("filters").addEventListener("change", loadAppointments);
+
+// --- métricas -------------------------------------------------------------------------------
+
+function tile(label, value, detail) {
+  return el(
+    "div",
+    { className: "tile" },
+    el("div", { className: "label", text: label }),
+    el("div", { className: "value", text: value }),
+    detail ? el("div", { className: "detail", text: detail }) : null,
+  );
+}
+
+const pct = (value) => (value == null ? "—" : `${Math.round(value * 100)}%`);
+const minutes = (value) => (value == null ? "—" : `${value.toLocaleString("pt-BR")} min`);
+
+async function loadMetrics() {
+  let m;
+  try {
+    m = await api(`/api/admin/metrics?days=${$("m-days").value}`);
+  } catch {
+    return;
+  }
+  $("tiles").replaceChildren(
+    tile("Conversas", String(m.conversations), "com mensagem do cliente no período"),
+    tile("Resolvidas pelo bot", pct(m.resolved_rate), `${m.resolved_by_bot} sem pedir atendente`),
+    tile("Pedidos de atendente", String(m.handoffs), `${m.urgent_handoffs} urgentes · ${m.handoffs_answered} respondidos`),
+    tile("Tempo até o atendimento", minutes(m.median_minutes_to_human), m.max_minutes_to_human == null ? "mediana" : `mediana · máximo ${minutes(m.max_minutes_to_human)}`),
+    tile("Respostas da IA", String(m.ai_answered), `${m.ai_handoffs} encaminhadas · ${m.ai_errors} erros`),
+    tile("Latência da IA", m.ai_median_latency_ms == null ? "—" : `${m.ai_median_latency_ms} ms`, "mediana"),
+    tile("Consultas agendadas", String(m.appointments_by_bot + m.appointments_by_staff), `${m.appointments_by_bot} pelo bot · ${m.appointments_by_staff} pela equipe`),
+    tile("Cancelamentos", String(m.cancellations), "no período"),
+  );
+}
+
+$("m-days").addEventListener("change", loadMetrics);
 
 // --- início ---------------------------------------------------------------------------------
 

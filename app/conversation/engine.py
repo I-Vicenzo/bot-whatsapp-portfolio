@@ -18,6 +18,7 @@ from datetime import date, datetime, timedelta
 from enum import StrEnum
 from typing import Any
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.ai.responder import AIResponder, AIStatus
@@ -31,6 +32,7 @@ from app.db.models import (
     Channel,
     Conversation,
     ConversationStatus,
+    Handoff,
     Priority,
     Specialty,
 )
@@ -143,6 +145,14 @@ class ConversationEngine:
         waiting = conversation.status == ConversationStatus.WAITING_HUMAN
         if intents.matches(Intent.URGENT, turn.text):
             conversation.priority = Priority.URGENT
+            open_handoff = turn.session.scalar(
+                select(Handoff)
+                .where(Handoff.conversation_id == conversation.id)
+                .order_by(Handoff.id.desc())
+                .limit(1)
+            )
+            if open_handoff is not None:
+                open_handoff.priority = Priority.URGENT
             # Orientação de emergência sempre sai, mesmo com humano na conversa.
             return EngineResult([Reply(texts.HANDOFF_URGENT)], Intent.URGENT)
         if waiting and intents.matches(Intent.MENU, turn.text):
@@ -245,6 +255,14 @@ class ConversationEngine:
         conversation.handoff_at = self.clock.local_now()
         conversation.handoff_reason = reason or (
             "Urgência informada pelo cliente" if urgent else "Cliente pediu atendente"
+        )
+        turn.session.add(
+            Handoff(
+                conversation_id=conversation.id,
+                requested_at=conversation.handoff_at,
+                priority=conversation.priority,
+                reason=conversation.handoff_reason,
+            )
         )
         self._reset(turn)
         if urgent:

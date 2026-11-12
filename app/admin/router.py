@@ -18,6 +18,7 @@ from app.admin.auth import (
     current_user,
     uses_default_password,
 )
+from app.admin.metrics import compute_metrics
 from app.config import AppEnv, Settings
 from app.conversation.service import (
     ConversationNotFound,
@@ -386,3 +387,39 @@ def cancel_appointment(appointment_id: int, request: Request, _user: CurrentUser
             status.HTTP_404_NOT_FOUND, "Consulta não encontrada ou já cancelada."
         ) from exc
     return Response(status_code=status.HTTP_204_NO_CONTENT)
+
+
+# --- métricas ----------------------------------------------------------------------------
+
+
+class MetricsOut(BaseModel):
+    days: int
+    conversations: int
+    resolved_by_bot: int
+    resolved_rate: float | None
+    handoffs: int
+    urgent_handoffs: int
+    handoffs_answered: int
+    median_minutes_to_human: float | None
+    max_minutes_to_human: float | None
+    ai_answered: int
+    ai_handoffs: int
+    ai_errors: int
+    ai_median_latency_ms: int | None
+    appointments_by_bot: int
+    appointments_by_staff: int
+    cancellations: int
+
+
+@router.get("/metrics", summary="Indicadores do atendimento nos últimos N dias")
+def metrics(
+    request: Request,
+    _user: CurrentUser,
+    days: Annotated[int, Query(ge=1, le=90)] = 7,
+) -> MetricsOut:
+    end = _now(request) + timedelta(seconds=1)
+    start = datetime.combine(end.date() - timedelta(days=days - 1), datetime.min.time())
+    with _session(request) as session:
+        result = compute_metrics(session, start, end)
+    data = {k: v for k, v in result.__dict__.items() if k not in ("start", "end")}
+    return MetricsOut(days=days, resolved_rate=result.resolved_rate, **data)

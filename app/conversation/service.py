@@ -26,6 +26,7 @@ from app.db.models import (
     Channel,
     Conversation,
     ConversationStatus,
+    Handoff,
     Message,
     Priority,
 )
@@ -273,6 +274,17 @@ class ConversationService:
             conversation.status = ConversationStatus.HUMAN
             if conversation.assigned_to is None:
                 conversation.assigned_to = user_id
+            pending = session.scalar(
+                select(Handoff)
+                .where(
+                    Handoff.conversation_id == conversation.id,
+                    Handoff.first_response_at.is_(None),
+                )
+                .order_by(Handoff.id.desc())
+                .limit(1)
+            )
+            if pending is not None:
+                pending.first_response_at = self.clock.local_now()
             message = self._add_message(session, conversation, Author.AGENT, text)
             if message is None:  # pragma: no cover - sem external_id não há duplicata
                 raise RuntimeError("mensagem do atendente não gravada")

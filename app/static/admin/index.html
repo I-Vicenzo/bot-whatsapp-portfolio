@@ -41,6 +41,7 @@
           </button>
           <button type="button" role="tab" data-tab="all">Conversas</button>
           <button type="button" role="tab" data-tab="appointments">Agendamentos</button>
+          <button type="button" role="tab" data-tab="metrics">Métricas</button>
         </nav>
         <div class="user">
           <a href="/" target="_blank" rel="noopener">Simulador</a>
@@ -114,6 +115,24 @@
           </table>
         </div>
         <p class="empty" id="appointments-empty" hidden>Nenhuma consulta com esses filtros.</p>
+      </main>
+
+      <main class="metrics card" id="metrics-view" hidden>
+        <div class="metrics-head">
+          <h2>Indicadores do atendimento</h2>
+          <label>Período
+            <select id="m-days">
+              <option value="1">Hoje</option>
+              <option value="7" selected>Últimos 7 dias</option>
+              <option value="30">Últimos 30 dias</option>
+            </select>
+          </label>
+        </div>
+        <div class="tiles" id="tiles"></div>
+        <p class="hint">
+          Resolvida pelo bot: conversa com mensagens do cliente no período e sem pedido de
+          atendente. Tempo até o atendimento: do pedido até a primeira resposta da equipe.
+        </p>
       </main>
     </div>
 

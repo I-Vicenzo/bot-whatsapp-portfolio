@@ -298,7 +298,7 @@ Observações:
 - [x] Bloqueios de agenda (feriados, férias de profissional): `closures` no YAML, tabela `schedule_blocks` e trigger que recusa consulta em dia bloqueado
 - [ ] Perfil Ollama no compose (IA local, sem chave)
 - [x] Comando "apagar meus dados" (LGPD): com confirmação; cancela consultas futuras, anonimiza o histórico e apaga a conversa
-- [ ] Métricas no painel: resolvido pelo bot, uso de IA, tempo até atendimento humano
+- [x] Métricas no painel: resolvido pelo bot, uso de IA, tempo até atendimento humano (tabela `handoffs` com pedido e primeira resposta)
 - [ ] Teste E2E do simulador com Playwright no CI
 
 ## 8. Segurança (transversal)
