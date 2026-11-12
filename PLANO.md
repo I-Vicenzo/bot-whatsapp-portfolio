@@ -235,16 +235,18 @@ Observações:
 
 ### Fase 3: WhatsApp Cloud API
 
-- [ ] `GET /webhook/whatsapp`: confere `hub.mode` e `hub.verify_token`, devolve `hub.challenge`
-- [ ] `POST /webhook/whatsapp`: valida `X-Hub-Signature-256` (HMAC-SHA256 do corpo bruto com o App Secret, `hmac.compare_digest`); inválida → 401; válida → 200 imediato e processamento em background
-- [ ] Leitura do payload: `messages` (texto e `interactive`) e `contacts` (nome do perfil); `statuses` ignorados; tipos não suportados (áudio, imagem…) recebem resposta padrão
-- [ ] Deduplicação pelo id da mensagem (`messages.external_id` único)
-- [ ] Envio com httpx: timeout, retry com backoff em 429/5xx, erros logados; marcar como lida (opcional)
-- [ ] `last_inbound_at` atualizado para controlar a janela de 24 h
-- [ ] `docs/whatsapp-setup.md`: app na Meta, número de teste e destinatários, token permanente (usuário do sistema), App Secret, túnel HTTPS local (cloudflared ou ngrok), assinatura do campo `messages`
-- [ ] Testes: assinatura válida/inválida/ausente, verificação, mesmo payload duas vezes → uma resposta, `statuses` ignorado, envio mockado com respx
+- [x] `GET /webhook/whatsapp`: confere `hub.mode` e `hub.verify_token`, devolve `hub.challenge`
+- [x] `POST /webhook/whatsapp`: valida `X-Hub-Signature-256` (HMAC-SHA256 do corpo bruto com o App Secret, `hmac.compare_digest`); inválida → 401; válida → 200 imediato e processamento em background
+- [x] Leitura do payload: `messages` (texto e `interactive`) e `contacts` (nome do perfil); `statuses` ignorados; tipos não suportados (áudio, imagem…) recebem resposta padrão
+- [x] Deduplicação pelo id da mensagem (`messages.external_id` único)
+- [x] Envio com httpx: timeout, retry com backoff em 429/5xx, erros logados; marcar como lida (opcional)
+- [x] `last_inbound_at` atualizado para controlar a janela de 24 h
+- [x] `docs/whatsapp-setup.md`: app na Meta, número de teste e destinatários, token permanente (usuário do sistema), App Secret, túnel HTTPS local (cloudflared ou ngrok), assinatura do campo `messages`
+- [x] Testes: assinatura válida/inválida/ausente, verificação, mesmo payload duas vezes → uma resposta, `statuses` ignorado, envio mockado com respx
 
 **Pronto quando:** conversa real com o número de teste funciona de ponta a ponta e os testes passam.
+
+> Pendência (usuário): o teste de ponta a ponta com o número real depende da conta de desenvolvedor na Meta (seção 12). Todo o resto está coberto por testes com a API da Meta simulada.
 
 ### Fase 4: IA de reserva
 
@@ -295,8 +297,8 @@ Observações:
 
 ## 8. Segurança (transversal)
 
-- [ ] Assinatura do webhook validada sobre o corpo bruto, comparação em tempo constante
-- [ ] Deduplicação garantida pelo banco (índice único no id externo)
+- [x] Assinatura do webhook validada sobre o corpo bruto, comparação em tempo constante
+- [x] Deduplicação garantida pelo banco (índice único no id externo)
 - [ ] Segredos só em variáveis de ambiente; `.env` no `.gitignore`; `.env.example` sem valores; tokens nunca logados; telefones mascarados nos logs
 - [ ] Painel: Argon2; cookie HttpOnly + SameSite (+ Secure em produção); CSRF mitigado (SameSite + corpo JSON + checagem de `Origin`); limite de tentativas de login; em produção, recusa iniciar com senha padrão
 - [ ] Simulador exposto: rate limit por IP, tamanho máximo de mensagem (feitos na Fase 2), teto de chamadas à IA
@@ -347,4 +349,4 @@ Observações:
 
 ## 12. Pendências externas
 
-- Conta de desenvolvedor na Meta e chave do Groq: só necessárias nas fases 3 e 4.
+- **Pendente:** conta de desenvolvedor na Meta para o teste real da Fase 3 (passo a passo em `docs/whatsapp-setup.md`) e chave do Groq para validar a Fase 4 com o provedor real (`scripts/eval_llm.py`). O código não depende delas: tudo roda e é testado sem.
