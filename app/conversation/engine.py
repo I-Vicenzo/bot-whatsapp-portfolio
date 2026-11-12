@@ -79,6 +79,7 @@ class EngineResult:
     replies: list[Reply]
     intent: str | None = None
     source: Source = Source.RULE
+    erase_data: bool = False  # o serviço apaga os dados do contato depois de responder
 
 
 @dataclass
@@ -170,6 +171,10 @@ class ConversationEngine:
         if intents.matches(Intent.MENU, turn.text):
             self._reset(turn)
             return EngineResult([self._menu()], Intent.MENU)
+        if intents.matches(Intent.ERASE_DATA, turn.text):
+            turn.ctx = {}
+            turn.go(State.ERASE_CONFIRM)
+            return EngineResult([self._erase_reply()], Intent.ERASE_DATA)
 
         state = turn.state
         if state is State.MENU:
@@ -290,6 +295,7 @@ class ConversationEngine:
             State.BOOK_CONFIRM: self._on_confirm,
             State.CANCEL_PICK: self._on_cancel_pick,
             State.CANCEL_CONFIRM: self._on_cancel_confirm,
+            State.ERASE_CONFIRM: self._on_erase_confirm,
         }
         return handlers[turn.state](turn)
 
@@ -308,6 +314,8 @@ class ConversationEngine:
             return self._confirm_reply(turn)
         if state is State.CANCEL_PICK:
             return self._cancel_pick_reply(self._cancel_candidates(turn))
+        if state is State.ERASE_CONFIRM:
+            return self._erase_reply()
         return Reply(texts.confirm_cancel(self._cancel_target(turn)))
 
     def _retry(self, turn: _Turn, message: str) -> EngineResult:
@@ -555,3 +563,17 @@ class ConversationEngine:
         except AppointmentNotFound:
             return EngineResult([Reply(texts.CANCEL_NOT_FOUND)], Intent.CANCEL)
         return EngineResult([Reply(texts.CANCELLED)], Intent.CANCEL)
+
+    # --- LGPD -----------------------------------------------------------------------------
+
+    def _erase_reply(self) -> Reply:
+        return Reply(texts.ERASE_CONFIRM, YES_NO, numbered=False)
+
+    def _on_erase_confirm(self, turn: _Turn) -> EngineResult:
+        answer = parse_yes_no(turn.text)
+        if answer is None:
+            return self._retry(turn, texts.CONFIRM_YES_NO)
+        self._reset(turn)
+        if not answer:
+            return EngineResult([Reply(texts.ERASE_KEPT)], Intent.ERASE_DATA)
+        return EngineResult([Reply(texts.ERASED)], Intent.ERASE_DATA, erase_data=True)

@@ -11,6 +11,7 @@ class Intent(StrEnum):
     URGENT = "urgent"
     HUMAN = "human"
     MENU = "menu"
+    ERASE_DATA = "erase_data"
     CANCEL = "cancel"
     MY_APPOINTMENTS = "my_appointments"
     BOOK = "book"
@@ -23,7 +24,7 @@ class Intent(StrEnum):
     THANKS = "thanks"
 
 
-GLOBAL_INTENTS = (Intent.URGENT, Intent.HUMAN, Intent.MENU)
+GLOBAL_INTENTS = (Intent.URGENT, Intent.HUMAN, Intent.MENU, Intent.ERASE_DATA)
 # CANCEL antes: "cancela minha consulta" também casa com MY_APPOINTMENTS.
 ACTION_INTENTS = (Intent.CANCEL, Intent.MY_APPOINTMENTS, Intent.BOOK)
 INFO_INTENTS = (
@@ -47,6 +48,9 @@ _PATTERNS: dict[Intent, re.Pattern[str]] = {
         r"|falar com (alguem|uma pessoa|algum atendente|a recepcao|voces))\b"
     ),
     Intent.MENU: _rx(r"^(menu|inicio|sair|0)$|\bmenu\b|^voltar ao (menu|inicio)$"),
+    Intent.ERASE_DATA: _rx(
+        r"\b(apag\w*|exclu\w*|delet\w*|remov\w*|esquec\w*)( todos)?( os)?( meus)? dados\b|\blgpd\b"
+    ),
     Intent.MY_APPOINTMENTS: _rx(
         r"\b(minhas? consultas?|meus? agendamentos?|minhas? marcac\w*"
         r"|ver (as |minhas )?consultas?|tenho (alguma )?consulta"

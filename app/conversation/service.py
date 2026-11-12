@@ -19,7 +19,16 @@ from app.conversation import texts
 from app.conversation.engine import ConversationEngine, EngineResult, Source
 from app.conversation.reply import Reply
 from app.conversation.states import State
-from app.db.models import Author, Channel, Conversation, ConversationStatus, Message, Priority
+from app.db.models import (
+    Appointment,
+    AppointmentStatus,
+    Author,
+    Channel,
+    Conversation,
+    ConversationStatus,
+    Message,
+    Priority,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -104,6 +113,10 @@ class ConversationService:
                 result = self._unsupported(conversation)
             else:
                 result = self.engine.handle(session, conversation, text)
+            if result.erase_data:
+                self._erase(session, conversation)
+                return InboundResult(conversation_id=conversation.id, replies=result.replies)
+
             ids = [inbound.id]
             author = Author.AI if result.source is Source.AI else Author.BOT
             for reply in result.replies:
@@ -122,6 +135,24 @@ class ConversationService:
                     source=str(result.source if result.replies else Source.SILENT),
                 ),
             )
+
+    def _erase(self, session: Session, conversation: Conversation) -> None:
+        """LGPD: cancela consultas futuras, anonimiza o histórico de consultas do telefone e
+        apaga a conversa (mensagens e registros de IA saem em cascata no banco)."""
+        now = self.clock.local_now()
+        appointments = session.scalars(
+            select(Appointment).where(Appointment.patient_phone == conversation.contact)
+        ).all()
+        for appointment in appointments:
+            if appointment.status == AppointmentStatus.CONFIRMED and appointment.starts_at >= now:
+                appointment.status = AppointmentStatus.CANCELLED
+                appointment.cancelled_at = now
+            appointment.patient_name = texts.ERASED_PATIENT_NAME
+            appointment.patient_phone = f"removido-{appointment.id}"
+        session.flush()
+        session.delete(conversation)
+        session.flush()
+        logger.info("LGPD: dados de um contato apagados a pedido (%d consultas)", len(appointments))
 
     def _unsupported(self, conversation: Conversation) -> EngineResult:
         conversation.last_inbound_at = self.clock.local_now()  # abre a janela de 24 h

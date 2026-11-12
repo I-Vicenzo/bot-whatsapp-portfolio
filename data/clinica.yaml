@@ -64,6 +64,10 @@ faq:
     answer: >-
       No momento atendemos apenas presencialmente. Para dúvidas, fale com a recepção
       pelo telefone da clínica.
+  - keywords: [privacidade, protecao de dados, meus dados pessoais]
+    answer: >-
+      Usamos seus dados só para o atendimento e o agendamento. Para apagar tudo o que temos
+      sobre você, escreva *apagar meus dados*.
   - keywords: [resultado, resultados, exame, exames]
     answer: >-
       Resultados de exames são entregues na recepção ou enviados por e-mail.

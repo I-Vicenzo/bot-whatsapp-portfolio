@@ -252,6 +252,17 @@ def confirm_cancel(appointment: Appointment) -> str:
     return f"Cancelar esta consulta?\n\n{fmt_appointment(appointment)}\n\n(*sim* ou *não*)"
 
 
+ERASE_CONFIRM = (
+    "Posso apagar seus dados? Isso vai:\n\n"
+    "• cancelar suas consultas futuras;\n"
+    "• remover seu nome e telefone do histórico de consultas;\n"
+    "• apagar esta conversa.\n\n"
+    "Não dá para desfazer. Confirma? (*sim* ou *não*)"
+)
+ERASED = "Pronto: seus dados foram apagados. Se voltar a falar com a gente, começamos do zero."
+ERASE_KEPT = "Tudo bem, não apaguei nada. " + BACK_TO_MENU
+ERASED_PATIENT_NAME = "Removido (LGPD)"
+
 CANCELLED = "Consulta cancelada. O horário foi liberado. " + BACK_TO_MENU
 CANCEL_KEPT = "Tudo bem, sua consulta continua marcada. " + BACK_TO_MENU
 CANCEL_NOT_FOUND = "Não encontrei essa consulta: ela pode já ter sido cancelada. " + BACK_TO_MENU
