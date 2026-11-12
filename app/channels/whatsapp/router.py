@@ -65,16 +65,20 @@ async def receive(request: Request, background_tasks: BackgroundTasks) -> dict[s
             request.app.state.conversation_service,
             request.app.state.whatsapp_client,
             messages,
+            settings.whatsapp_interactive,
         )
     return {"status": "ok"}
 
 
 def process_messages(
-    service: ConversationService, client: WhatsAppClient, messages: list[IncomingMessage]
+    service: ConversationService,
+    client: WhatsAppClient,
+    messages: list[IncomingMessage],
+    interactive: bool = True,
 ) -> None:
     for message in messages:
         try:
-            _process(service, client, message)
+            _process(service, client, message, interactive)
         except Exception:
             # Uma mensagem com erro não derruba as outras do mesmo lote.
             logger.exception(
@@ -83,7 +87,10 @@ def process_messages(
 
 
 def _process(
-    service: ConversationService, client: WhatsAppClient, message: IncomingMessage
+    service: ConversationService,
+    client: WhatsAppClient,
+    message: IncomingMessage,
+    interactive: bool,
 ) -> None:
     result = service.receive(
         Channel.WHATSAPP,
@@ -98,6 +105,6 @@ def _process(
         return
     for reply in result.replies:
         try:
-            client.send_text(message.wa_id, reply.render())
+            client.send_reply(message.wa_id, reply, interactive=interactive)
         except WhatsAppError:
             return  # já registrado no log pelo cliente; não insiste nas próximas

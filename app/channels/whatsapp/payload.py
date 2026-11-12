@@ -8,6 +8,8 @@ from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
 
+from app.channels.whatsapp.interactive import option_value
+
 SUPPORTED_KINDS = frozenset({"text", "interactive", "button"})
 
 
@@ -39,7 +41,8 @@ def _text_of(message: dict[str, Any]) -> str | None:
     elif kind == "interactive":
         interactive = _dict(message.get("interactive"))
         choice = _dict(interactive.get("button_reply")) or _dict(interactive.get("list_reply"))
-        body = choice.get("title")
+        # Botões/listas do próprio bot trazem no id o valor a "digitar" (ex.: o número).
+        body = option_value(choice.get("id")) or choice.get("title")
     elif kind == "button":
         body = _dict(message.get("button")).get("text")
     else:

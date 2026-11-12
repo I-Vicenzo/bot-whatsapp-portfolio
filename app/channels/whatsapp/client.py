@@ -7,6 +7,8 @@ from typing import Any
 
 import httpx
 
+from app.channels.whatsapp.interactive import build_interactive
+from app.conversation.reply import Reply
 from app.logging_utils import mask_phone
 
 logger = logging.getLogger(__name__)
@@ -54,6 +56,25 @@ class WhatsAppClient:
         data = self._post(body, to)
         messages = data.get("messages") or [{}]
         return messages[0].get("id")
+
+    def send_interactive(self, to: str, interactive: dict[str, Any]) -> str | None:
+        body = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to,
+            "type": "interactive",
+            "interactive": interactive,
+        }
+        data = self._post(body, to)
+        messages = data.get("messages") or [{}]
+        return messages[0].get("id")
+
+    def send_reply(self, to: str, reply: Reply, *, interactive: bool = True) -> str | None:
+        """Botões ou lista quando cabem; senão, texto com a lista numerada."""
+        payload = build_interactive(reply) if interactive else None
+        if payload is not None:
+            return self.send_interactive(to, payload)
+        return self.send_text(to, reply.render())
 
     def mark_as_read(self, message_id: str) -> None:
         self._post(

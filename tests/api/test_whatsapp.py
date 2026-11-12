@@ -89,8 +89,16 @@ def post(
     return client.post("/webhook/whatsapp", content=body, headers=headers)
 
 
+def sent_bodies(meta: respx.MockRouter) -> list[dict[str, Any]]:
+    return [json.loads(call.request.content) for call in meta.calls]
+
+
 def sent_texts(meta: respx.MockRouter) -> list[str]:
-    return [json.loads(call.request.content)["text"]["body"] for call in meta.calls]
+    """Texto visível de cada envio (mensagem de texto ou corpo da interativa)."""
+    return [
+        b["text"]["body"] if b["type"] == "text" else b["interactive"]["body"]["text"]
+        for b in sent_bodies(meta)
+    ]
 
 
 # --- verificação -------------------------------------------------------------------------
@@ -166,9 +174,15 @@ def test_text_message_gets_reply(wa_client: TestClient, meta: respx.MockRouter) 
     assert call.request.headers["Authorization"] == f"Bearer {TOKEN}"
     body = json.loads(call.request.content)
     assert body["to"] == WA_ID
-    assert body["type"] == "text"
-    assert "Clínica Teste" in body["text"]["body"]
-    assert "*1.* Agendar consulta" in body["text"]["body"]  # opções viram lista numerada
+    assert body["type"] == "interactive"
+    interactive = body["interactive"]
+    assert interactive["type"] == "list"  # 7 opções do menu viram lista
+    assert "Clínica Teste" in interactive["body"]["text"]
+    rows = interactive["action"]["sections"][0]["rows"]
+    assert len(rows) == 7
+    assert rows[0] == {"id": "opt:1", "title": "Agendar consulta"}
+    assert all(len(r["title"]) <= 24 for r in rows)
+    assert rows[5]["description"] == "Endereço e horário de funcionamento"
 
     with wa_client.app.state.session_factory() as session:  # type: ignore[attr-defined]
         conversation = session.scalar(select(Conversation))
@@ -196,6 +210,68 @@ def test_statuses_are_ignored(wa_client: TestClient, meta: respx.MockRouter) -> 
 def test_other_objects_are_ignored(wa_client: TestClient, meta: respx.MockRouter) -> None:
     assert post(wa_client, {"object": "page", "entry": []}).status_code == 200
     assert not meta.calls
+
+
+def test_list_choice_is_handled_by_option_id(wa_client: TestClient, meta: respx.MockRouter) -> None:
+    choice = {
+        "from": WA_ID,
+        "id": "wamid.list",
+        "type": "interactive",
+        "interactive": {
+            "type": "list_reply",
+            "list_reply": {"id": "opt:6", "title": "Endereço e horário"},  # título truncado
+        },
+    }
+    post(wa_client, webhook(choice))
+    assert "Horário de funcionamento" in sent_texts(meta)[0]
+
+
+def test_yes_no_go_as_buttons(wa_client: TestClient, meta: respx.MockRouter) -> None:
+    for i, text in enumerate(["agendar cardio", "segunda", "10h", "Maria Silva"]):
+        post(wa_client, webhook(text_message(text, f"wamid.{i}")))
+    last = sent_bodies(meta)[-1]["interactive"]
+    assert last["type"] == "button"
+    assert [b["reply"] for b in last["action"]["buttons"]] == [
+        {"id": "opt:Sim", "title": "Sim"},
+        {"id": "opt:Não", "title": "Não"},
+    ]
+    button = {
+        "from": WA_ID,
+        "id": "wamid.yes",
+        "type": "interactive",
+        "interactive": {"type": "button_reply", "button_reply": {"id": "opt:Sim", "title": "Sim"}},
+    }
+    post(wa_client, webhook(button))
+    assert "Consulta confirmada" in sent_texts(meta)[-1]
+
+
+def test_time_slots_go_as_text(wa_client: TestClient, meta: respx.MockRouter) -> None:
+    for i, text in enumerate(["agendar cardio", "segunda"]):
+        post(wa_client, webhook(text_message(text, f"wamid.{i}")))
+    last = sent_bodies(meta)[-1]
+    assert last["type"] == "text"  # 17 horários: o texto já lista as opções
+    assert "Manhã: 08:00" in last["text"]["body"]
+
+
+def test_interactive_can_be_disabled(
+    settings: Settings, clock: FixedClock, meta: respx.MockRouter
+) -> None:
+    plain = Settings(
+        _env_file=None,
+        **{
+            **settings.model_dump(),
+            "whatsapp_token": TOKEN,
+            "whatsapp_phone_number_id": "123456",
+            "whatsapp_app_secret": SECRET,
+            "whatsapp_verify_token": VERIFY,
+            "whatsapp_interactive": False,
+        },
+    )
+    with TestClient(create_app(plain, clock=clock)) as client:
+        post(client, webhook(text_message("oi")))
+    [body] = sent_bodies(meta)
+    assert body["type"] == "text"
+    assert "*1.* Agendar consulta" in body["text"]["body"]
 
 
 def test_interactive_reply(wa_client: TestClient, meta: respx.MockRouter) -> None:

@@ -30,6 +30,7 @@ Para adaptar a outro negócio, edite [data/clinica.yaml](data/clinica.yaml) (nom
 
 **Para o cliente (WhatsApp ou simulador)**
 
+- Opções como botões e listas interativas no WhatsApp (e botões no simulador)
 - Agendamento guiado: especialidade, dia (aceita "amanhã", "sexta", "15/11"), horário livre ("14h", "14:30"), nome e confirmação
 - Consultar e cancelar as próprias consultas
 - Perguntas sobre endereço, horário, convênios, valores e FAQ, inclusive no meio de um agendamento, sem perder o andamento
@@ -136,7 +137,6 @@ Todos os dados são **fictícios**: clínica, profissionais, endereço, telefone
 ## Próximos passos
 
 - Demo pública hospedada
-- Botões e listas interativas do WhatsApp
 - Transcrição de áudio (Whisper)
 - PostgreSQL via perfil do docker-compose (triggers em PL/pgSQL)
 - Lembrete 24 h antes da consulta (template aprovado)
