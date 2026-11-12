@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simulador do assistente</title>
+    <meta name="description" content="Simulador web do assistente virtual de uma clínica fictícia no WhatsApp." />
+    <link rel="stylesheet" href="/static/simulator/style.css" />
+  </head>
+  <body>
+    <div class="banner" role="note">
+      Demonstração com <strong>dados 100% fictícios</strong>. Não envie dados reais de saúde.
+    </div>
+
+    <header class="topbar">
+      <div>
+        <h1 id="clinic-name">Assistente virtual</h1>
+        <p class="subtitle">Simulador: o mesmo motor de conversa que atende no WhatsApp</p>
+      </div>
+      <div class="chips" aria-label="Status das integrações">
+        <span class="chip" id="chip-whatsapp">WhatsApp: …</span>
+        <span class="chip" id="chip-ai">IA: …</span>
+        <a class="chip link" href="/docs" target="_blank" rel="noopener">API</a>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="phone" aria-label="Conversa">
+        <div class="phone-header">
+          <div class="avatar" aria-hidden="true">+</div>
+          <div>
+            <div class="phone-title" id="phone-title">Clínica</div>
+            <div class="phone-sub">assistente virtual</div>
+          </div>
+        </div>
+        <div class="messages" id="messages" aria-live="polite"></div>
+        <div class="options" id="options"></div>
+        <form class="composer" id="composer" autocomplete="off">
+          <input
+            id="input"
+            name="text"
+            maxlength="1000"
+            placeholder="Escreva uma mensagem"
+            aria-label="Mensagem"
+            required
+          />
+          <button type="submit" id="send" aria-label="Enviar">➤</button>
+        </form>
+      </section>
+
+      <aside class="side">
+        <section class="card">
+          <h2>Cliente</h2>
+          <label for="contact">Número fictício</label>
+          <div class="row">
+            <input id="contact" inputmode="numeric" pattern="\d{8,15}" maxlength="15" />
+            <button type="button" class="secondary" id="new-contact" title="Gerar outro número">
+              Novo
+            </button>
+          </div>
+          <p class="hint">
+            Cada aba é um cliente. Abra outra aba para simular dois clientes disputando o mesmo
+            horário.
+          </p>
+          <button type="button" class="secondary wide" id="reset">Reiniciar conversa</button>
+        </section>
+
+        <section class="card">
+          <h2>Cenários prontos</h2>
+          <div class="scenarios">
+            <button type="button" data-say="Oi, quero agendar uma consulta">Agendar consulta</button>
+            <button type="button" data-say="Vocês aceitam convênio?">Convênio</button>
+            <button type="button" data-say="Tem estacionamento?">Pergunta livre</button>
+            <button type="button" data-say="Minhas consultas">Minhas consultas</button>
+            <button type="button" data-say="Quero falar com um atendente">Pedir atendente</button>
+            <button type="button" data-say="É urgente!">Urgência</button>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2>Por dentro do bot</h2>
+          <dl class="debug">
+            <dt>Estado</dt>
+            <dd id="dbg-state">—</dd>
+            <dt>Intenção</dt>
+            <dd id="dbg-intent">—</dd>
+            <dt>Origem</dt>
+            <dd id="dbg-source">—</dd>
+            <dt>Atendimento</dt>
+            <dd id="dbg-status">—</dd>
+          </dl>
+          <p class="hint">
+            O bot entende por regras (regex + máquina de estados); a IA só entra no que fica
+            fora do roteiro.
+          </p>
+        </section>
+      </aside>
+    </main>
+
+    <script src="/static/simulator/app.js" defer></script>
+  </body>
+</html>

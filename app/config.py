@@ -20,6 +20,7 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./var/app.db"
     clinic_data_path: Path = Path("data/clinica.yaml")
     demo_seed: bool = True
+    simulator_rate_limit_per_minute: int = 30
 
     session_secret: SecretStr | None = None
     admin_username: str = "admin"
