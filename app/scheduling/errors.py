@@ -27,6 +27,10 @@ class TooSoon(SchedulingError):
     """Antes da antecedência mínima."""
 
 
+class BlockedDay(SchedulingError):
+    """Dia bloqueado (feriado ou férias do profissional)."""
+
+
 class TooFarAhead(SchedulingError):
     """Além da janela de agendamento."""
 
@@ -48,6 +52,7 @@ _DB_ERRORS: tuple[tuple[str, type[SchedulingError]], ...] = (
     ("uq_appointments_patient_slot", PatientAlreadyBooked),
     ("outside_business_hours", OutsideBusinessHours),
     ("too_soon", TooSoon),
+    ("blocked_day", BlockedDay),
     ("ck_appointments_starts_at_slot", InvalidSlot),
     ("ck_appointments_starts_at_format", InvalidSlot),
 )

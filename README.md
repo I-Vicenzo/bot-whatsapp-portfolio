@@ -91,7 +91,7 @@ flowchart LR
 
 - `CHECK` garante a grade de 30 minutos e o formato canônico do horário
 - índices únicos parciais (`WHERE status = 'confirmed'`) impedem horário duplicado por especialidade e por paciente; cancelar libera o horário
-- triggers recusam horário fora do expediente e sem a antecedência mínima, usando `clinic_now()`, uma função SQL alimentada pelo mesmo relógio injetável do código
+- triggers recusam horário fora do expediente, em dia bloqueado (feriado, férias do profissional) e sem a antecedência mínima, usando `clinic_now()`, uma função SQL alimentada pelo mesmo relógio injetável do código
 
 Quando dois clientes confirmam o mesmo horário ao mesmo tempo, o índice decide: um confirma e o outro recebe outras opções. Cada regra tem um teste que tenta violá-la direto no banco, e um teste com duas threads disputando o mesmo horário.
 
@@ -140,7 +140,6 @@ Todos os dados são **fictícios**: clínica, profissionais, endereço, telefone
 - Demo pública hospedada
 - PostgreSQL via perfil do docker-compose (triggers em PL/pgSQL)
 - Lembrete 24 h antes da consulta (template aprovado)
-- Bloqueios de agenda (feriados, férias)
 - Comando "apagar meus dados" (LGPD)
 
 Roteiro completo e decisões em [PLANO.md](PLANO.md).

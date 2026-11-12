@@ -42,8 +42,10 @@ class Scheduler:
             minutes=self.clinic.scheduling.min_advance_minutes
         )
 
-    def _grid(self, day: date) -> Iterator[datetime]:
-        """Todos os inícios de consulta do dia pelo horário de funcionamento."""
+    def _grid(self, day: date, specialty: Specialty) -> Iterator[datetime]:
+        """Inícios de consulta do dia pelo horário de funcionamento (nada se bloqueado)."""
+        if self.clinic.closure_for(day, specialty.slug) is not None:
+            return
         for interval in self.clinic.business_hours.for_weekday(day.weekday()):
             start = datetime.combine(day, interval.start)
             end = datetime.combine(day, interval.end)
@@ -79,14 +81,14 @@ class Scheduler:
             )
         )
 
-    def _free(self, day: date, taken: set[datetime]) -> list[datetime]:
+    def _free(self, day: date, specialty: Specialty, taken: set[datetime]) -> list[datetime]:
         earliest = self.earliest_start()
-        return [s for s in self._grid(day) if s >= earliest and s not in taken]
+        return [s for s in self._grid(day, specialty) if s >= earliest and s not in taken]
 
     def available_slots(self, session: Session, specialty: Specialty, day: date) -> list[datetime]:
         if not self.clock.today() <= day <= self.last_bookable_day:
             return []
-        return self._free(day, self._taken(session, specialty, day, day))
+        return self._free(day, specialty, self._taken(session, specialty, day, day))
 
     def available_days(
         self, session: Session, specialty: Specialty, limit: int | None = None
@@ -96,7 +98,7 @@ class Scheduler:
         days: list[date] = []
         day = first
         while day <= last and (limit is None or len(days) < limit):
-            if self._free(day, taken):
+            if self._free(day, specialty, taken):
                 days.append(day)
             day += timedelta(days=1)
         return days

@@ -2,6 +2,7 @@
 
 from app.scheduling.errors import (
     AppointmentNotFound,
+    BlockedDay,
     InvalidSlot,
     OutsideBusinessHours,
     PatientAlreadyBooked,
@@ -15,6 +16,7 @@ from app.scheduling.service import Scheduler
 
 __all__ = [
     "AppointmentNotFound",
+    "BlockedDay",
     "InvalidSlot",
     "OutsideBusinessHours",
     "PatientAlreadyBooked",

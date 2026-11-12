@@ -136,6 +136,7 @@ Regras de agenda garantidas no banco (cada uma com teste que tenta violá-la e e
 | Sem horário duplicado | Índice único parcial `(specialty_id, starts_at) WHERE status = 'confirmed'`; cancelar libera o horário |
 | Paciente sem duas consultas no mesmo horário | Índice único parcial `(patient_phone, starts_at) WHERE status = 'confirmed'` |
 | Horário de funcionamento | Trigger `BEFORE INSERT/UPDATE`: exige linha em `business_hours` para o dia da semana com início ≥ abertura e início + 30 ≤ fechamento |
+| Dias bloqueados (feriados, férias) | Trigger `BEFORE INSERT/UPDATE`: recusa se houver `schedule_blocks` cobrindo a data, para a clínica toda ou para a especialidade |
 | Antecedência mínima | Trigger `BEFORE INSERT`: `starts_at` ≥ agora (fuso da clínica) + antecedência |
 | Domínio | `CHECK` em status, preço ≥ 0 e nome não vazio; chaves estrangeiras ativas |
 
@@ -289,12 +290,12 @@ Observações:
 
 ### Fase 7: Extras pós-MVP (por impacto)
 
-- [ ] Demo pública hospedada. **Pendência (usuário):** escolher e criar a conta de hospedagem (ex.: Fly.io, Render ou VPS); o container já está pronto (com os limites anti-abuso da seção 8): link direto no portfólio
+- [ ] Demo pública hospedada (com os limites anti-abuso da seção 8): link direto no portfólio. **Pendência (usuário):** escolher e criar a conta de hospedagem (ex.: Fly.io, Render ou VPS); o container já está pronto
 - [x] Botões e listas interativas do WhatsApp (até 3 opções curtas viram botões, até 10 numeradas viram lista; o resto segue como texto)
 - [x] Transcrição de áudio (Whisper via Groq): áudio é muito usado no WhatsApp no Brasil (`AUDIO_TRANSCRIPTION_ENABLED=true`; falha ou desligado = resposta padrão)
 - [ ] PostgreSQL via perfil do docker-compose (triggers em PL/pgSQL)
 - [ ] Lembrete 24 h antes da consulta (exige template aprovado)
-- [ ] Bloqueios de agenda (feriados, férias de profissional)
+- [x] Bloqueios de agenda (feriados, férias de profissional): `closures` no YAML, tabela `schedule_blocks` e trigger que recusa consulta em dia bloqueado
 - [ ] Perfil Ollama no compose (IA local, sem chave)
 - [ ] Comando "apagar meus dados" (LGPD)
 - [ ] Métricas no painel: resolvido pelo bot, uso de IA, tempo até atendimento humano

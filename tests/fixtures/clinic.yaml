@@ -36,3 +36,11 @@ faq:
     answer: Temos estacionamento gratuito.
   - keywords: [pix, cartao]
     answer: Aceitamos Pix e cartão.
+
+closures:
+  - date: 2026-11-19
+    reason: feriado municipal
+  - start: 2026-11-17
+    end: 2026-11-18
+    specialty: cardiologia
+    reason: congresso do Dr. Bruno

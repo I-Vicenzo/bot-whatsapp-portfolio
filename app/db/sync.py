@@ -4,7 +4,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.clinic import ClinicData
-from app.db.models import BusinessHour, ScheduleSettings, Specialty
+from app.db.models import BusinessHour, ScheduleBlock, ScheduleSettings, Specialty
 
 
 def sync_clinic(session: Session, clinic: ClinicData) -> None:
@@ -26,6 +26,19 @@ def sync_clinic(session: Session, clinic: ClinicData) -> None:
         BusinessHour(weekday=weekday, open_min=r.open_min, close_min=r.close_min)
         for weekday in range(7)
         for r in clinic.business_hours.for_weekday(weekday)
+    )
+
+    session.flush()  # ids das especialidades novas
+    ids = {s.slug: s.id for s in session.scalars(select(Specialty))}
+    session.execute(delete(ScheduleBlock))
+    session.add_all(
+        ScheduleBlock(
+            specialty_id=ids[c.specialty] if c.specialty else None,
+            start_date=c.start,
+            end_date=c.end,
+            reason=c.reason,
+        )
+        for c in clinic.closures
     )
 
     settings = session.get(ScheduleSettings, 1) or ScheduleSettings(id=1)

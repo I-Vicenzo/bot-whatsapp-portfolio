@@ -11,6 +11,17 @@ def build_system_prompt(clinic: ClinicData) -> str:
 
     faq = "\n".join(f"- {entry.answer}" for entry in clinic.faq) or "- (sem perguntas frequentes)"
     name = clinic.clinic.name
+    names = {s.slug: s.name for s in clinic.specialties}
+    closures = (
+        "\n".join(
+            f"- {c.start:%d/%m/%Y}"
+            + (f" a {c.end:%d/%m/%Y}" if c.end != c.start else "")
+            + f": {c.reason}"
+            + (f" (só {names[c.specialty]})" if c.specialty else " (clínica fechada)")
+            for c in clinic.closures
+        )
+        or "- (nenhum)"
+    )
     return f"""Você é o assistente virtual da {name}, respondendo clientes pelo WhatsApp.
 
 Regras obrigatórias:
@@ -33,6 +44,9 @@ Endereço e telefone:
 {texts.specialties_and_prices(clinic)}
 
 Convênios: {texts.insurances(clinic)}
+
+Dias sem atendimento:
+{closures}
 
 Perguntas frequentes:
 {faq}

@@ -4,7 +4,7 @@ fonte da verdade das regras do banco, incluindo os triggers.
 Horários: "horário de parede" da clínica, sem offset (ver app/clock.py).
 """
 
-from datetime import datetime
+from datetime import date, datetime
 from enum import StrEnum
 from typing import Any
 
@@ -255,3 +255,19 @@ class LLMCall(Base):
     created_at: Mapped[datetime] = mapped_column(LocalDateTime)
     latency_ms: Mapped[int]
     outcome: Mapped[str] = mapped_column(String(16))
+
+
+class ScheduleBlock(Base):
+    """Bloqueio de agenda sincronizado do YAML (`closures`). Sem especialidade = clínica toda."""
+
+    __tablename__ = "schedule_blocks"
+    __table_args__ = (
+        CheckConstraint("start_date <= end_date", name="period"),
+        CheckConstraint("length(trim(reason)) > 0", name="reason_not_empty"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    specialty_id: Mapped[int | None] = mapped_column(ForeignKey("specialties.id"))
+    start_date: Mapped[date]
+    end_date: Mapped[date]
+    reason: Mapped[str] = mapped_column(String(120))

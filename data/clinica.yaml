@@ -68,3 +68,15 @@ faq:
     answer: >-
       Resultados de exames são entregues na recepção ou enviados por e-mail.
       Não informamos resultados por aqui, para proteger seus dados.
+
+# Dias sem atendimento. `date` para um dia; `start`/`end` para um período.
+# Sem `specialty`, vale para a clínica toda.
+closures:
+  - date: 2026-12-25
+    reason: Natal
+  - date: 2027-01-01
+    reason: Ano-novo
+  - start: 2027-01-04
+    end: 2027-01-15
+    specialty: dermatologia
+    reason: férias da Dra. Beatriz Lins

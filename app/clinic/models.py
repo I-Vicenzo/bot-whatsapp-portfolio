@@ -4,7 +4,7 @@ As validações aqui antecipam as regras do banco (intervalos de 30 min, horári
 que um arquivo errado falhe na inicialização com mensagem clara, e não no primeiro agendamento.
 """
 
-from datetime import time
+from datetime import date, time
 from decimal import Decimal
 from functools import cached_property
 from itertools import pairwise
@@ -149,6 +149,40 @@ class FaqEntry(_Model):
         return tuple(normalize(k) for k in self.keywords)
 
 
+class Closure(_Model):
+    """Dia(s) sem atendimento: feriado (clínica toda) ou férias de um profissional.
+
+    No YAML: `date: 2026-12-25` para um dia, ou `start`/`end` para um período.
+    """
+
+    start: date
+    end: date
+    specialty: str | None = None  # slug; vazio = clínica inteira
+    reason: NonEmptyStr
+
+    @model_validator(mode="before")
+    @classmethod
+    def _single_date(cls, value: Any) -> Any:
+        if isinstance(value, dict) and "date" in value:
+            data = dict(value)
+            day = data.pop("date")
+            data.setdefault("start", day)
+            data.setdefault("end", day)
+            return data
+        if isinstance(value, dict) and "start" in value and "end" not in value:
+            return {**value, "end": value["start"]}
+        return value
+
+    @model_validator(mode="after")
+    def _check(self) -> Self:
+        if self.end < self.start:
+            raise ValueError(f"fim antes do início: {self.start} a {self.end}")
+        return self
+
+    def covers(self, day: date, specialty: str) -> bool:
+        return self.start <= day <= self.end and self.specialty in (None, specialty)
+
+
 class ClinicData(_Model):
     clinic: ClinicInfo
     business_hours: BusinessHours
@@ -156,6 +190,7 @@ class ClinicData(_Model):
     specialties: Annotated[tuple[SpecialtyInfo, ...], Field(min_length=1)]
     insurances: tuple[NonEmptyStr, ...] = ()
     faq: tuple[FaqEntry, ...] = ()
+    closures: tuple[Closure, ...] = ()
 
     @model_validator(mode="after")
     def _unique_identifiers(self) -> Self:
@@ -171,6 +206,17 @@ class ClinicData(_Model):
                         f"{owner[term]} e {spec.slug}"
                     )
         return self
+
+    @model_validator(mode="after")
+    def _closures_reference_specialties(self) -> Self:
+        slugs = {s.slug for s in self.specialties}
+        for closure in self.closures:
+            if closure.specialty is not None and closure.specialty not in slugs:
+                raise ValueError(f"bloqueio com especialidade desconhecida: {closure.specialty}")
+        return self
+
+    def closure_for(self, day: date, specialty: str) -> Closure | None:
+        return next((c for c in self.closures if c.covers(day, specialty)), None)
 
     def specialty(self, slug: str) -> SpecialtyInfo | None:
         return next((s for s in self.specialties if s.slug == slug), None)

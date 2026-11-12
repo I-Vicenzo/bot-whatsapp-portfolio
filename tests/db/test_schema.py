@@ -28,6 +28,8 @@ def test_triggers_exist(db_engine: Engine) -> None:
             conn.exec_driver_sql("SELECT name FROM sqlite_master WHERE type = 'trigger'").scalars()
         )
     assert names == {
+        "trg_appointments_blocked_insert",
+        "trg_appointments_blocked_update",
         "trg_appointments_business_hours_insert",
         "trg_appointments_business_hours_update",
         "trg_appointments_min_advance_insert",

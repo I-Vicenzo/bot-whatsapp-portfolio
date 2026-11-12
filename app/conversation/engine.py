@@ -384,12 +384,15 @@ class ConversationEngine:
         _, row = self._spec(turn)
         slots = self.scheduler.available_slots(turn.session, row, day)
         if not slots:
-            return self._retry(turn, texts.day_unavailable(day, self._why_no_slots(day)))
+            return self._retry(turn, texts.day_unavailable(day, self._why_no_slots(turn, day)))
         turn.ctx["day"] = day.isoformat()
         turn.go(State.BOOK_TIME)
         return EngineResult([self._time_reply(turn, day, slots)], Intent.BOOK)
 
-    def _why_no_slots(self, day: date) -> str:
+    def _why_no_slots(self, turn: _Turn, day: date) -> str:
+        closure = self.clinic.closure_for(day, turn.ctx["specialty"])
+        if closure is not None:
+            return texts.reason_closure(closure.reason)
         if day < self.clock.today():
             return texts.REASON_PAST
         if day > self.scheduler.last_bookable_day:

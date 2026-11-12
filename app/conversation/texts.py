@@ -173,6 +173,10 @@ REASON_TOO_FAR = "a agenda ainda não está aberta para essa data"
 REASON_FULL = "todos os horários estão ocupados"
 
 
+def reason_closure(reason: str) -> str:
+    return f"não há atendimento nesse dia ({reason})"
+
+
 def ask_time(specialty: SpecialtyInfo, day: date, slots: Sequence[datetime]) -> str:
     morning = [fmt_time(s) for s in slots if s.hour < 12]
     afternoon = [fmt_time(s) for s in slots if s.hour >= 12]
