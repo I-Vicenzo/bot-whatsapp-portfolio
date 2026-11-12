@@ -20,6 +20,8 @@ class IncomingMessage:
     kind: str
     text: str | None  # None = tipo não suportado (áudio, imagem...)
     profile_name: str | None = None
+    media_id: str | None = None  # áudio: para baixar e transcrever
+    mime_type: str | None = None
 
     @property
     def supported(self) -> bool:
@@ -73,10 +75,13 @@ def _iter_messages(payload: dict[str, Any]) -> Iterator[IncomingMessage]:
                 if not isinstance(message_id, str) or not isinstance(wa_id, str):
                     continue
                 kind = str(message.get("type", "unknown"))
+                audio = _dict(message.get("audio"))
                 yield IncomingMessage(
                     message_id=message_id,
                     wa_id=wa_id,
                     kind=kind,
                     text=_text_of(message) if kind in SUPPORTED_KINDS else None,
                     profile_name=names.get(wa_id),
+                    media_id=audio.get("id") if kind == "audio" else None,
+                    mime_type=audio.get("mime_type") if kind == "audio" else None,
                 )

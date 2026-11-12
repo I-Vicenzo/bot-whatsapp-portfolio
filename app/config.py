@@ -39,6 +39,8 @@ class Settings(BaseSettings):
     llm_model: str = "openai/gpt-oss-20b"
     llm_timeout_seconds: float = 15.0
     llm_max_question_chars: int = 300
+    audio_transcription_enabled: bool = False
+    transcription_model: str = "whisper-large-v3"
     llm_calls_per_contact_per_hour: int = 10
     llm_daily_cap: int = 200
 
@@ -70,6 +72,11 @@ class Settings(BaseSettings):
     @property
     def ai_enabled(self) -> bool:
         return self.llm_enabled and self.llm_api_key is not None
+
+    @property
+    def transcription_enabled(self) -> bool:
+        """Usa o mesmo provedor e chave da IA (Groq por padrão)."""
+        return self.audio_transcription_enabled and self.llm_api_key is not None
 
     @property
     def demo_mode(self) -> bool:

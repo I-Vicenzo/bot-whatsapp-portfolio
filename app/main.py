@@ -18,9 +18,11 @@ from app.admin import router as admin
 from app.admin.auth import SessionCodec, ensure_initial_user
 from app.ai.client import OpenAICompatibleClient
 from app.ai.responder import AILimits, AIResponder
+from app.ai.transcription import Transcriber
 from app.channels import simulator
 from app.channels.whatsapp import router as whatsapp
 from app.channels.whatsapp.client import WhatsAppClient, WhatsAppError
+from app.channels.whatsapp.router import WhatsAppOptions
 from app.clinic import load_clinic
 from app.clock import Clock, SystemClock
 from app.config import Settings, get_settings
@@ -69,6 +71,10 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
         app.state.scheduler = scheduler
         app.state.conversation_engine = conversation_engine
         whatsapp_client = _whatsapp_client(settings)
+        transcriber = _transcriber(settings) if whatsapp_client else None
+        app.state.whatsapp_options = WhatsAppOptions(
+            interactive=settings.whatsapp_interactive, transcriber=transcriber
+        )
         app.state.whatsapp_client = whatsapp_client
         senders: dict[Channel, Sender] = {}
         if whatsapp_client is not None:
@@ -87,6 +93,8 @@ def create_app(settings: Settings | None = None, clock: Clock | None = None) -> 
                 app.state.whatsapp_client.close()
             if llm is not None:
                 llm.close()
+            if transcriber is not None:
+                transcriber.close()
             engine.dispose()
 
     app = FastAPI(
@@ -181,3 +189,14 @@ def _whatsapp_sender(client: WhatsAppClient) -> Sender:
             raise DeliveryError(str(exc)) from exc
 
     return send
+
+
+def _transcriber(settings: Settings) -> Transcriber | None:
+    if not settings.transcription_enabled:
+        return None
+    return Transcriber(
+        base_url=settings.llm_base_url,
+        api_key=settings.llm_api_key.get_secret_value(),  # type: ignore[union-attr]
+        model=settings.transcription_model,
+        timeout_seconds=max(settings.llm_timeout_seconds, 30.0),
+    )

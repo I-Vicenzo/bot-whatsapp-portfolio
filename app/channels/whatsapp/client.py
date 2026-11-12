@@ -35,7 +35,8 @@ class WhatsAppClient:
         sleep: Callable[[float], None] = time.sleep,
     ) -> None:
         self._token = token
-        self._url = f"{GRAPH_URL}/{api_version}/{phone_number_id}/messages"
+        self._graph = f"{GRAPH_URL}/{api_version}"
+        self._url = f"{self._graph}/{phone_number_id}/messages"
         self._http = http or httpx.Client(timeout=httpx.Timeout(10.0, connect=5.0))
         self._max_retries = max_retries
         self._backoff = backoff_seconds
@@ -75,6 +76,27 @@ class WhatsAppClient:
         if payload is not None:
             return self.send_interactive(to, payload)
         return self.send_text(to, reply.render())
+
+    def download_media(self, media_id: str, max_bytes: int) -> tuple[bytes, str]:
+        """Baixa uma mídia recebida (dois passos: metadados com a URL, depois o arquivo)."""
+        headers = {"Authorization": f"Bearer {self._token}"}
+        try:
+            meta = self._http.get(f"{self._graph}/{media_id}", headers=headers)
+            meta.raise_for_status()
+            info = meta.json()
+            if int(info.get("file_size") or 0) > max_bytes:
+                raise WhatsAppError("mídia grande demais")
+            media = self._http.get(info["url"], headers=headers)
+            media.raise_for_status()
+        except httpx.HTTPStatusError as exc:
+            raise WhatsAppError(f"HTTP {exc.response.status_code} ao baixar mídia") from exc
+        except httpx.HTTPError as exc:
+            raise WhatsAppError(f"erro de rede ao baixar mídia ({type(exc).__name__})") from exc
+        except (ValueError, KeyError, TypeError) as exc:
+            raise WhatsAppError("metadados de mídia inesperados") from exc
+        if len(media.content) > max_bytes:
+            raise WhatsAppError("mídia grande demais")
+        return media.content, str(info.get("mime_type") or "audio/ogg")
 
     def mark_as_read(self, message_id: str) -> None:
         self._post(

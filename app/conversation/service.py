@@ -83,6 +83,7 @@ class ConversationService:
         display_name: str | None = None,
         external_id: str | None = None,
         unsupported_kind: str | None = None,
+        stored_text: str | None = None,
     ) -> InboundResult:
         """Processa uma mensagem do cliente. `unsupported_kind` (ex.: "audio") registra a
         mensagem sem passar pelo motor e responde que só entendemos texto."""
@@ -91,7 +92,10 @@ class ConversationService:
             if display_name:
                 conversation.display_name = display_name
 
-            stored = f"[mensagem do tipo {unsupported_kind}]" if unsupported_kind else text
+            if unsupported_kind:
+                stored = f"[mensagem do tipo {unsupported_kind}]"
+            else:
+                stored = stored_text or text
             inbound = self._add_message(session, conversation, Author.CUSTOMER, stored, external_id)
             if inbound is None:
                 return InboundResult(conversation.id, duplicate=True)
@@ -124,6 +128,13 @@ class ConversationService:
         if conversation.status != ConversationStatus.BOT:
             return EngineResult([], source=Source.SILENT)  # o atendente vê o registro
         return EngineResult([Reply(texts.UNSUPPORTED_MESSAGE)], "unsupported")
+
+    def already_received(self, external_id: str) -> bool:
+        """Atalho para evitar trabalho caro (ex.: transcrição) em reenvios da Meta. A garantia
+        continua sendo o índice único em `receive`."""
+        with self.session_factory() as session:
+            found = session.scalar(select(Message.id).where(Message.external_id == external_id))
+            return found is not None
 
     def get_or_create(self, session: Session, channel: Channel, contact: str) -> Conversation:
         conversation = session.scalar(

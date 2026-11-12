@@ -291,7 +291,7 @@ Observações:
 
 - [ ] Demo pública hospedada. **Pendência (usuário):** escolher e criar a conta de hospedagem (ex.: Fly.io, Render ou VPS); o container já está pronto (com os limites anti-abuso da seção 8): link direto no portfólio
 - [x] Botões e listas interativas do WhatsApp (até 3 opções curtas viram botões, até 10 numeradas viram lista; o resto segue como texto)
-- [ ] Transcrição de áudio (Whisper via Groq): áudio é muito usado no WhatsApp no Brasil
+- [x] Transcrição de áudio (Whisper via Groq): áudio é muito usado no WhatsApp no Brasil (`AUDIO_TRANSCRIPTION_ENABLED=true`; falha ou desligado = resposta padrão)
 - [ ] PostgreSQL via perfil do docker-compose (triggers em PL/pgSQL)
 - [ ] Lembrete 24 h antes da consulta (exige template aprovado)
 - [ ] Bloqueios de agenda (feriados, férias de profissional)
