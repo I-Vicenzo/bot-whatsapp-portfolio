@@ -282,7 +282,8 @@ Observações:
 - [x] README em português (estrutura na seção 10)
 - [x] Prints e GIF do simulador e do painel (capturados com Playwright)
 - [ ] Vídeo curto com a integração real (roteiro na seção 10). **Pendência (usuário):** depende do número de teste da Meta (Fase 3)
-- [ ] Repositório: descrição, tópicos, badge de CI, release `v1.0.0`
+- [x] Repositório: descrição, tópicos, badge de CI, tag `v1.0.0`
+- [ ] Release `v1.0.0` no GitHub. **Pendência (usuário):** publicar com `gh release create v1.0.0 --title v1.0.0 --notes-file docs/release-v1.0.0.md` (a criação de conteúdo público é bloqueada para o assistente)
 
 **Pronto quando:** clone + 3 comandos → demo funcionando em poucos minutos; CI verde.
 
