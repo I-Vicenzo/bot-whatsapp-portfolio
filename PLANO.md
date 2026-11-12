@@ -296,7 +296,7 @@ Observações:
 - [ ] PostgreSQL via perfil do docker-compose (triggers em PL/pgSQL)
 - [ ] Lembrete 24 h antes da consulta (exige template aprovado)
 - [x] Bloqueios de agenda (feriados, férias de profissional): `closures` no YAML, tabela `schedule_blocks` e trigger que recusa consulta em dia bloqueado
-- [ ] Perfil Ollama no compose (IA local, sem chave)
+- [x] Perfil Ollama no compose (IA local, sem chave): `docker-compose.ollama.yml` (override). Validado com `docker compose config`; a execução completa (download de vários GB) não foi testada nesta máquina
 - [x] Comando "apagar meus dados" (LGPD): com confirmação; cancela consultas futuras, anonimiza o histórico e apaga a conversa
 - [x] Métricas no painel: resolvido pelo bot, uso de IA, tempo até atendimento humano (tabela `handoffs` com pedido e primeira resposta)
 - [ ] Teste E2E do simulador com Playwright no CI

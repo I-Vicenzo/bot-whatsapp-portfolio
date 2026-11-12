@@ -118,6 +118,12 @@ Quando dois clientes confirmam o mesmo horário ao mesmo tempo, o índice decide
   # LLM_MODEL=gpt-4o-mini
   ```
 
+  Ou rode a IA **localmente, sem chave**, com o Ollama:
+
+  ```bash
+  docker compose -f docker-compose.yml -f docker-compose.ollama.yml up
+  ```
+
   `uv run python -m scripts.eval_llm` roda 20 perguntas, dentro e fora dos dados, contra o provedor real e mostra se cada resposta teve o comportamento esperado.
 
 Todas as variáveis estão em [.env.example](.env.example).

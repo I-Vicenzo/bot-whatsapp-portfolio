@@ -1,0 +1,37 @@
+# IA local com Ollama, sem chave de API:
+#   docker compose -f docker-compose.yml -f docker-compose.ollama.yml up
+# Na primeira vez o modelo é baixado (alguns GB). Para outro modelo: OLLAMA_MODEL=qwen2.5:7b ...
+services:
+  ollama:
+    image: ollama/ollama:latest
+    volumes:
+      - ollama-models:/root/.ollama
+    healthcheck:
+      test: ["CMD", "ollama", "list"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  ollama-pull:
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+    entrypoint: ["ollama", "pull", "${OLLAMA_MODEL:-llama3.2:3b}"]
+    restart: "no"
+
+  app:
+    depends_on:
+      ollama-pull:
+        condition: service_completed_successfully
+    environment:
+      LLM_ENABLED: "true"
+      LLM_BASE_URL: http://ollama:11434/v1
+      LLM_API_KEY: ollama # o Ollama ignora a chave; o app só exige que exista
+      LLM_MODEL: ${OLLAMA_MODEL:-llama3.2:3b}
+      LLM_TIMEOUT_SECONDS: "60" # CPU é lenta na primeira resposta
+
+volumes:
+  ollama-models:
