@@ -265,14 +265,14 @@ Observações:
 
 ### Fase 5: Painel do atendente
 
-- [ ] Login/logout (Argon2, cookie HttpOnly + SameSite); usuário inicial via env; no modo demo, credenciais exibidas na tela de login
-- [ ] Fila "aguardando humano": urgentes primeiro, tempo de espera; ações assumir, responder, devolver ao bot
-- [ ] Conversas: lista (canal, status, última mensagem) e histórico com o autor de cada mensagem (cliente, bot, IA, atendente)
-- [ ] Agendamentos: lista com filtros (data, especialidade, status) e cancelamento
-- [ ] Resposta do atendente entregue pelo canal certo; no WhatsApp, bloqueada fora da janela de 24 h com aviso de que exige template
-- [ ] Dados de demonstração: conversas de exemplo (uma aguardando humano, uma urgente)
-- [ ] Atualização por polling; conteúdo de cliente renderizado só com `textContent`
-- [ ] Testes: rotas exigem login, login inválido, responder, devolver ao bot, janela de 24 h
+- [x] Login/logout (Argon2, cookie HttpOnly + SameSite); usuário inicial via env; no modo demo, credenciais exibidas na tela de login
+- [x] Fila "aguardando humano": urgentes primeiro, tempo de espera; ações assumir, responder, devolver ao bot
+- [x] Conversas: lista (canal, status, última mensagem) e histórico com o autor de cada mensagem (cliente, bot, IA, atendente)
+- [x] Agendamentos: lista com filtros (data, especialidade, status) e cancelamento
+- [x] Resposta do atendente entregue pelo canal certo; no WhatsApp, bloqueada fora da janela de 24 h com aviso de que exige template
+- [x] Dados de demonstração: conversas de exemplo (uma aguardando humano, uma urgente)
+- [x] Atualização por polling; conteúdo de cliente renderizado só com `textContent`
+- [x] Testes: rotas exigem login, login inválido, responder, devolver ao bot, janela de 24 h
 
 **Pronto quando:** o roteiro "simulador pede atendente → aparece na fila → atendente responde → simulador recebe" funciona.
 
@@ -303,12 +303,12 @@ Observações:
 
 - [x] Assinatura do webhook validada sobre o corpo bruto, comparação em tempo constante
 - [x] Deduplicação garantida pelo banco (índice único no id externo)
-- [ ] Segredos só em variáveis de ambiente; `.env` no `.gitignore`; `.env.example` sem valores; tokens nunca logados; telefones mascarados nos logs
-- [ ] Painel: Argon2; cookie HttpOnly + SameSite (+ Secure em produção); CSRF mitigado (SameSite + corpo JSON + checagem de `Origin`); limite de tentativas de login; em produção, recusa iniciar com senha padrão
-- [ ] Simulador exposto: rate limit por IP, tamanho máximo de mensagem (feitos na Fase 2), teto de chamadas à IA
-- [ ] XSS: conteúdo vindo de cliente nunca vai para `innerHTML`
+- [x] Segredos só em variáveis de ambiente; `.env` no `.gitignore`; `.env.example` sem valores; tokens nunca logados; telefones mascarados nos logs
+- [x] Painel: Argon2; cookie HttpOnly + SameSite (+ Secure em produção); CSRF mitigado (SameSite + corpo JSON + checagem de `Origin`); limite de tentativas de login; em produção, recusa iniciar com senha padrão
+- [x] Simulador exposto: rate limit por IP, tamanho máximo de mensagem, teto de chamadas à IA
+- [x] XSS: conteúdo vindo de cliente nunca vai para `innerHTML`
 - [x] IA sem ferramentas nem ações, com contexto só de dados públicos da clínica: uma injeção de prompt não agenda, não cancela e não expõe dados de outros pacientes
-- [ ] Container não-root; dependências travadas no `uv.lock`
+- [x] Container não-root; dependências travadas no `uv.lock`
 
 ## 9. Configuração (variáveis de ambiente)
 

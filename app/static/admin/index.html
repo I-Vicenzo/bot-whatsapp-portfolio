@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Painel do atendente</title>
+    <meta name="description" content="Painel do atendente do assistente virtual da clínica fictícia." />
+    <link
+      rel="icon"
+      href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230f7a5c'/%3E%3Cpath d='M13 7h6v6h6v6h-6v6h-6v-6H7v-6h6z' fill='white'/%3E%3C/svg%3E"
+    />
+    <link rel="stylesheet" href="/static/admin/style.css" />
+  </head>
+  <body>
+    <div class="banner" role="note">
+      Demonstração com <strong>dados 100% fictícios</strong>.
+    </div>
+
+    <!-- Login -->
+    <main id="login-view" class="login" hidden>
+      <form id="login-form" class="card login-card" autocomplete="on">
+        <h1>Painel do atendente</h1>
+        <label for="username">Usuário</label>
+        <input id="username" name="username" autocomplete="username" required />
+        <label for="password">Senha</label>
+        <input id="password" name="password" type="password" autocomplete="current-password" required />
+        <button type="submit" class="primary">Entrar</button>
+        <p class="error" id="login-error" role="alert"></p>
+        <p class="hint" id="demo-credentials" hidden></p>
+        <p class="hint"><a href="/">Abrir o simulador do cliente</a></p>
+      </form>
+    </main>
+
+    <!-- Painel -->
+    <div id="app-view" hidden>
+      <header class="topbar">
+        <h1>Painel do atendente</h1>
+        <nav class="tabs" role="tablist">
+          <button type="button" role="tab" data-tab="queue" aria-selected="true">
+            Fila <span class="badge" id="queue-count">0</span>
+          </button>
+          <button type="button" role="tab" data-tab="all">Conversas</button>
+          <button type="button" role="tab" data-tab="appointments">Agendamentos</button>
+        </nav>
+        <div class="user">
+          <a href="/" target="_blank" rel="noopener">Simulador</a>
+          <span id="user-name"></span>
+          <button type="button" class="link" id="logout">Sair</button>
+        </div>
+      </header>
+
+      <main class="workspace" id="conversations-view">
+        <section class="list card" aria-label="Conversas">
+          <ul id="conversation-list"></ul>
+          <p class="empty" id="list-empty" hidden>Nenhuma conversa aqui.</p>
+        </section>
+
+        <section class="detail card" aria-label="Conversa selecionada">
+          <div id="detail-empty" class="empty">Selecione uma conversa.</div>
+          <div id="detail" hidden>
+            <div class="detail-head">
+              <div>
+                <h2 id="detail-title"></h2>
+                <p class="meta" id="detail-meta"></p>
+              </div>
+              <div class="actions">
+                <button type="button" id="assign">Assumir</button>
+                <button type="button" id="release">Devolver ao bot</button>
+              </div>
+            </div>
+            <p class="warning" id="window-warning" hidden>
+              Passaram 24 h desde a última mensagem do cliente: o WhatsApp só permite mensagens de
+              template aprovado. Respostas livres estão bloqueadas.
+            </p>
+            <div class="messages" id="messages"></div>
+            <form id="reply-form" class="composer">
+              <input id="reply-text" maxlength="2000" placeholder="Responder ao cliente" aria-label="Resposta" required />
+              <button type="submit" class="primary">Enviar</button>
+            </form>
+            <p class="error" id="reply-error" role="alert"></p>
+          </div>
+        </section>
+      </main>
+
+      <main class="appointments card" id="appointments-view" hidden>
+        <form class="filters" id="filters">
+          <label>Data <input type="date" id="f-date" /></label>
+          <label>Especialidade
+            <select id="f-specialty"><option value="">Todas</option></select>
+          </label>
+          <label>Status
+            <select id="f-status">
+              <option value="">Todos</option>
+              <option value="confirmed">Confirmadas</option>
+              <option value="cancelled">Canceladas</option>
+            </select>
+          </label>
+          <span class="hint">Sem data: de hoje em diante.</span>
+        </form>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Data e hora</th>
+                <th>Especialidade</th>
+                <th>Paciente</th>
+                <th>Telefone</th>
+                <th>Canal</th>
+                <th>Status</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody id="appointment-rows"></tbody>
+          </table>
+        </div>
+        <p class="empty" id="appointments-empty" hidden>Nenhuma consulta com esses filtros.</p>
+      </main>
+    </div>
+
+    <script src="/static/admin/app.js" defer></script>
+  </body>
+</html>
