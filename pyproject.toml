@@ -17,6 +17,7 @@ dependencies = [
     "httpx>=0.28.1",
     "argon2-cffi>=25.1.0",
     "itsdangerous>=2.2.0",
+    "psycopg[binary]>=3.3.8",
 ]
 
 [dependency-groups]
@@ -34,7 +35,10 @@ package = false
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = "-ra --strict-markers --strict-config -m \"not e2e\""
-markers = ["e2e: testes no navegador com Playwright (uv run pytest -m e2e)"]
+markers = [
+    "e2e: testes no navegador com Playwright (uv run pytest -m e2e)",
+    "sqlite_only: depende de comportamento específico do SQLite",
+]
 filterwarnings = [
     "error",
     # Starlette 1.10 prefere httpx2 no TestClient; httpx segue necessário (envio + respx).

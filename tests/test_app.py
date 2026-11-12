@@ -57,9 +57,9 @@ def test_invalid_clinic_file_prevents_startup(tmp_path: Path) -> None:
         create_app(make_settings(tmp_path, broken))
 
 
-def test_only_sqlite_is_supported(tmp_path: Path) -> None:
+def test_unsupported_database_is_rejected(tmp_path: Path) -> None:
     settings = make_settings(tmp_path).model_copy(
-        update={"database_url": "postgresql://u:p@localhost/db"}
+        update={"database_url": "mysql://u:p@localhost/db"}
     )
     app = create_app(settings)
     with pytest.raises(ValueError, match="não suportado"), TestClient(app):

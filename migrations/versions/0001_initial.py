@@ -8,6 +8,9 @@ Regras de agenda garantidas aqui (o código valida antes; o banco é a última b
 
 Nomes de CHECK são curtos: a convenção de `Base.metadata` acrescenta `ck_<tabela>_`.
 
+Funciona em SQLite e PostgreSQL. No PostgreSQL os triggers são funções PL/pgSQL e os erros saem
+com SQLSTATE `check_violation`, para chegarem à aplicação como IntegrityError, como no SQLite.
+
 Revision ID: 0001
 Revises:
 Create Date: 2026-11-12
@@ -24,6 +27,77 @@ branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
 LOCAL_DATETIME = sa.DateTime()
+
+
+def _postgres() -> bool:
+    return op.get_bind().dialect.name == "postgresql"
+
+
+def _starts_at_checks() -> list[sa.CheckConstraint]:
+    if _postgres():
+        # timestamp já garante o formato; basta a grade de 30 min sem segundos.
+        return [
+            sa.CheckConstraint(
+                "date_trunc('minute', starts_at) = starts_at"
+                " AND EXTRACT(MINUTE FROM starts_at) IN (0, 30)",
+                name="starts_at_slot",
+            )
+        ]
+    return [
+        sa.CheckConstraint(
+            "starts_at = coalesce(strftime('%Y-%m-%d %H:%M:%S', starts_at), '')",
+            name="starts_at_format",
+        ),
+        sa.CheckConstraint(
+            "coalesce(strftime('%M:%S', starts_at), '') IN ('00:00', '30:00')",
+            name="starts_at_slot",
+        ),
+    ]
+
+
+PG_CLINIC_NOW = """
+CREATE FUNCTION clinic_now() RETURNS timestamp LANGUAGE sql STABLE AS $$
+    SELECT COALESCE(
+        NULLIF(current_setting('app.now', true), '')::timestamp,
+        date_trunc('second', now() AT TIME ZONE 'America/Sao_Paulo')
+    )
+$$
+"""
+
+PG_RULES_FUNCTION = """
+CREATE FUNCTION appointments_schedule_rules() RETURNS trigger LANGUAGE plpgsql AS $$
+DECLARE
+    start_min integer :=
+        EXTRACT(HOUR FROM NEW.starts_at)::integer * 60
+        + EXTRACT(MINUTE FROM NEW.starts_at)::integer;
+BEGIN
+    IF NEW.status <> 'confirmed' THEN
+        RETURN NEW;
+    END IF;
+    IF NOT EXISTS (
+        SELECT 1 FROM business_hours AS bh
+        WHERE bh.weekday = EXTRACT(ISODOW FROM NEW.starts_at)::integer - 1
+          AND start_min >= bh.open_min
+          AND start_min + 30 <= bh.close_min
+    ) THEN
+        RAISE EXCEPTION 'outside_business_hours' USING ERRCODE = 'check_violation';
+    END IF;
+    IF (TG_OP = 'INSERT' OR NEW.starts_at IS DISTINCT FROM OLD.starts_at)
+       AND NEW.starts_at < clinic_now() + make_interval(
+           mins => (SELECT COALESCE(MAX(min_advance_minutes), 0) FROM schedule_settings)
+       ) THEN
+        RAISE EXCEPTION 'too_soon' USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END
+$$
+"""
+
+PG_RULES_TRIGGER = (
+    "CREATE TRIGGER trg_appointments_schedule_rules"
+    " BEFORE INSERT OR UPDATE OF starts_at, status ON appointments"
+    " FOR EACH ROW EXECUTE FUNCTION appointments_schedule_rules()"
+)
 
 # Minutos desde 00:00 e dia da semana (0 = segunda, como em Python) de NEW.starts_at.
 _START_MIN = (
@@ -81,7 +155,7 @@ def upgrade() -> None:
         sa.Column("name", sa.String(100), nullable=False),
         sa.Column("professional", sa.String(100), nullable=False),
         sa.Column("price_cents", sa.Integer(), nullable=False),
-        sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.text("1")),
+        sa.Column("active", sa.Boolean(), nullable=False, server_default=sa.true()),
         sa.CheckConstraint("price_cents >= 0", name="price_non_negative"),
         sa.CheckConstraint("length(trim(name)) > 0", name="name_not_empty"),
         sa.CheckConstraint("length(trim(slug)) > 0", name="slug_not_empty"),
@@ -124,14 +198,7 @@ def upgrade() -> None:
         sa.Column("channel", sa.String(16), nullable=False),
         sa.Column("created_at", LOCAL_DATETIME, nullable=False),
         sa.Column("cancelled_at", LOCAL_DATETIME, nullable=True),
-        sa.CheckConstraint(
-            "starts_at = coalesce(strftime('%Y-%m-%d %H:%M:%S', starts_at), '')",
-            name="starts_at_format",
-        ),
-        sa.CheckConstraint(
-            "coalesce(strftime('%M:%S', starts_at), '') IN ('00:00', '30:00')",
-            name="starts_at_slot",
-        ),
+        *_starts_at_checks(),
         sa.CheckConstraint("status IN ('confirmed', 'cancelled')", name="status_valid"),
         sa.CheckConstraint("channel IN ('whatsapp', 'simulator', 'admin')", name="channel_valid"),
         sa.CheckConstraint("length(trim(patient_name)) > 0", name="patient_name_not_empty"),
@@ -153,6 +220,7 @@ def upgrade() -> None:
         ["specialty_id", "starts_at"],
         unique=True,
         sqlite_where=sa.text("status = 'confirmed'"),
+        postgresql_where=sa.text("status = 'confirmed'"),
     )
     op.create_index(
         "uq_appointments_patient_slot",
@@ -160,6 +228,7 @@ def upgrade() -> None:
         ["patient_phone", "starts_at"],
         unique=True,
         sqlite_where=sa.text("status = 'confirmed'"),
+        postgresql_where=sa.text("status = 'confirmed'"),
     )
     op.create_index("ix_appointments_starts_at", "appointments", ["starts_at"])
 
@@ -229,6 +298,11 @@ def upgrade() -> None:
     )
     op.create_index("ix_messages_conversation_id_id", "messages", ["conversation_id", "id"])
 
+    if _postgres():
+        op.execute(PG_CLINIC_NOW)
+        op.execute(PG_RULES_FUNCTION)
+        op.execute(PG_RULES_TRIGGER)
+        return
     for name, (timing, condition, error) in TRIGGERS.items():
         op.execute(
             f"CREATE TRIGGER {name} {timing} WHEN {condition} "
@@ -237,7 +311,11 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    for name in TRIGGERS:
+    if _postgres():
+        op.execute("DROP TRIGGER IF EXISTS trg_appointments_schedule_rules ON appointments")
+        op.execute("DROP FUNCTION IF EXISTS appointments_schedule_rules()")
+        op.execute("DROP FUNCTION IF EXISTS clinic_now()")
+    for name in [] if _postgres() else TRIGGERS:
         op.execute(f"DROP TRIGGER IF EXISTS {name}")
     op.drop_table("messages")
     op.drop_table("conversations")

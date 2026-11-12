@@ -1,5 +1,6 @@
 """Migração x modelos, sincronização do YAML e idempotência da inicialização."""
 
+import pytest
 from alembic.autogenerate import compare_metadata
 from alembic.migration import MigrationContext
 from sqlalchemy import Engine, inspect, select
@@ -22,6 +23,7 @@ def test_migrations_are_idempotent(db_engine: Engine) -> None:
     assert "appointments" in inspect(db_engine).get_table_names()
 
 
+@pytest.mark.sqlite_only
 def test_triggers_exist(db_engine: Engine) -> None:
     with db_engine.connect() as conn:
         names = set(

@@ -23,6 +23,32 @@ _BLOCKED = """
     )
 """
 
+PG_FUNCTION = """
+CREATE FUNCTION appointments_blocked_days() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+    IF NEW.status = 'confirmed' AND EXISTS (
+        SELECT 1 FROM schedule_blocks AS b
+        WHERE NEW.starts_at::date BETWEEN b.start_date AND b.end_date
+          AND (b.specialty_id IS NULL OR b.specialty_id = NEW.specialty_id)
+    ) THEN
+        RAISE EXCEPTION 'blocked_day' USING ERRCODE = 'check_violation';
+    END IF;
+    RETURN NEW;
+END
+$$
+"""
+
+PG_TRIGGER = (
+    "CREATE TRIGGER trg_appointments_blocked"
+    " BEFORE INSERT OR UPDATE OF starts_at, status ON appointments"
+    " FOR EACH ROW EXECUTE FUNCTION appointments_blocked_days()"
+)
+
+
+def _postgres() -> bool:
+    return op.get_bind().dialect.name == "postgresql"
+
+
 TRIGGERS = {
     "trg_appointments_blocked_insert": "BEFORE INSERT ON appointments",
     "trg_appointments_blocked_update": "BEFORE UPDATE OF starts_at, status ON appointments",
@@ -46,6 +72,10 @@ def upgrade() -> None:
         ),
         sa.PrimaryKeyConstraint("id", name="pk_schedule_blocks"),
     )
+    if _postgres():
+        op.execute(PG_FUNCTION)
+        op.execute(PG_TRIGGER)
+        return
     for name, timing in TRIGGERS.items():
         op.execute(
             f"CREATE TRIGGER {name} {timing} WHEN {_BLOCKED} "
@@ -54,6 +84,10 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    for name in TRIGGERS:
-        op.execute(f"DROP TRIGGER IF EXISTS {name}")
+    if _postgres():
+        op.execute("DROP TRIGGER IF EXISTS trg_appointments_blocked ON appointments")
+        op.execute("DROP FUNCTION IF EXISTS appointments_blocked_days()")
+    else:
+        for name in TRIGGERS:
+            op.execute(f"DROP TRIGGER IF EXISTS {name}")
     op.drop_table("schedule_blocks")

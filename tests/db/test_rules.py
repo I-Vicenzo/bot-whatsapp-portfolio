@@ -12,6 +12,7 @@ INSERT = text(
     "INSERT INTO appointments "
     "(specialty_id, patient_phone, patient_name, starts_at, channel, created_at) "
     "VALUES (:specialty, :phone, 'Paciente Teste', :starts_at, 'simulator', '2026-11-12 09:00:00')"
+    " RETURNING id"
 )
 MONDAY = "2026-11-16"
 
@@ -23,7 +24,7 @@ def insert(
         result = conn.execute(
             INSERT, {"specialty": specialty, "phone": phone, "starts_at": starts_at}
         )
-        return int(result.lastrowid or 0)
+        return int(result.scalar_one())
 
 
 def rejects(engine: Engine, starts_at: str, error: str, **kwargs: object) -> None:
@@ -43,6 +44,7 @@ def test_start_must_be_on_30_minute_grid(db_engine: Engine, starts_at: str) -> N
     rejects(db_engine, starts_at, "ck_appointments_starts_at_slot")
 
 
+@pytest.mark.sqlite_only  # no PostgreSQL a coluna é timestamp: o formato já é garantido
 @pytest.mark.parametrize("starts_at", [f"{MONDAY} 10:00", "16/11/2026 10:00", "amanhã"])
 def test_start_must_use_canonical_format(db_engine: Engine, starts_at: str) -> None:
     # Formatos alternativos burlariam o índice único ('10:00' != '10:00:00').
@@ -81,7 +83,7 @@ def test_duplicate_slot_for_same_specialty(db_engine: Engine) -> None:
     rejects(
         db_engine,
         f"{MONDAY} 10:00:00",
-        r"appointments\.specialty_id, appointments\.starts_at",
+        r"appointments\.specialty_id, appointments\.starts_at|uq_appointments_specialty_slot",
         phone="5500000000002",
     )
 
@@ -96,7 +98,7 @@ def test_patient_cannot_have_two_appointments_at_same_time(db_engine: Engine) ->
     rejects(
         db_engine,
         f"{MONDAY} 10:00:00",
-        r"appointments\.patient_phone, appointments\.starts_at",
+        r"appointments\.patient_phone, appointments\.starts_at|uq_appointments_patient_slot",
         specialty=2,
     )
 
@@ -161,7 +163,7 @@ def test_moving_appointment_too_soon_is_rejected(db_engine: Engine) -> None:
 
 
 def test_foreign_keys_are_enforced(db_engine: Engine) -> None:
-    rejects(db_engine, f"{MONDAY} 10:00:00", "FOREIGN KEY", specialty=999)
+    rejects(db_engine, f"{MONDAY} 10:00:00", "(?i)foreign key", specialty=999)
 
 
 @pytest.mark.parametrize(
@@ -187,6 +189,12 @@ def test_domain_checks(db_engine: Engine, statement: str, error: str) -> None:
         conn.execute(text(statement))
 
 
+def test_clinic_now_follows_injected_clock(db_engine: Engine) -> None:
+    with db_engine.begin() as conn:
+        assert str(conn.execute(text("SELECT clinic_now()")).scalar()) == "2026-11-12 09:00:00"
+
+
+@pytest.mark.sqlite_only
 def test_connection_pragmas(db_engine: Engine) -> None:
     with db_engine.connect() as conn:
         assert conn.exec_driver_sql("PRAGMA foreign_keys").scalar() == 1

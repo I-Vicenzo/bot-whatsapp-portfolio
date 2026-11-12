@@ -19,6 +19,7 @@ from sqlalchemy import (
     Text,
     UniqueConstraint,
     text,
+    true,
 )
 from sqlalchemy.dialects.sqlite import DATETIME as SQLITE_DATETIME
 from sqlalchemy.ext.mutable import MutableDict
@@ -93,7 +94,7 @@ class Specialty(Base):
     name: Mapped[str] = mapped_column(String(100))
     professional: Mapped[str] = mapped_column(String(100))
     price_cents: Mapped[int]
-    active: Mapped[bool] = mapped_column(default=True, server_default=text("1"))
+    active: Mapped[bool] = mapped_column(default=True, server_default=true())
 
 
 class BusinessHour(Base):

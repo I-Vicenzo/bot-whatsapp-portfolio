@@ -203,7 +203,11 @@ class ConversationService:
             with session.begin_nested():
                 session.add(message)
         except IntegrityError as exc:
-            if external_id is not None and "messages.external_id" in str(exc.orig):
+            duplicate = any(
+                marker in str(exc.orig)
+                for marker in ("messages.external_id", "uq_messages_external_id")
+            )
+            if external_id is not None and duplicate:
                 return None
             raise
         return message
