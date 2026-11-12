@@ -299,7 +299,7 @@ Observações:
 - [x] Perfil Ollama no compose (IA local, sem chave): `docker-compose.ollama.yml` (override). Validado com `docker compose config`; a execução completa (download de vários GB) não foi testada nesta máquina
 - [x] Comando "apagar meus dados" (LGPD): com confirmação; cancela consultas futuras, anonimiza o histórico e apaga a conversa
 - [x] Métricas no painel: resolvido pelo bot, uso de IA, tempo até atendimento humano (tabela `handoffs` com pedido e primeira resposta)
-- [ ] Teste E2E do simulador com Playwright no CI
+- [x] Teste E2E do simulador com Playwright no CI (job `e2e`: agendamento por botões, texto do cliente sem virar HTML, resposta do atendente chegando ao simulador)
 
 ## 8. Segurança (transversal)
 

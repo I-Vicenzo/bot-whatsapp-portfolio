@@ -23,6 +23,7 @@ dependencies = [
 dev = [
     "pytest>=8.3",
     "pytest-cov>=6.0",
+    "pytest-playwright>=0.10.0",
     "respx>=0.23.1",
     "ruff>=0.8",
 ]
@@ -32,11 +33,14 @@ package = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers --strict-config"
+addopts = "-ra --strict-markers --strict-config -m \"not e2e\""
+markers = ["e2e: testes no navegador com Playwright (uv run pytest -m e2e)"]
 filterwarnings = [
     "error",
     # Starlette 1.10 prefere httpx2 no TestClient; httpx segue necessário (envio + respx).
     "ignore:Using `httpx` with `starlette.testclient` is deprecated:starlette.exceptions.StarletteDeprecationWarning",
+    # pytest-base-url (dependência do pytest-playwright) ainda usa fixture de sessão em método.
+    "ignore:Session-scoped fixtures defined as instance methods:pytest.PytestRemovedIn10Warning",
 ]
 
 [tool.coverage.run]

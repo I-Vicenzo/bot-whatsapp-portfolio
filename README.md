@@ -137,9 +137,10 @@ uv sync
 uv run uvicorn app.main:create_app --factory --reload   # http://localhost:8000
 uv run ruff check && uv run ruff format --check
 uv run pytest --cov
+uv run pytest -m e2e          # navegador (Playwright); no Windows sem Chromium: --browser-channel msedge
 ```
 
-São mais de 400 testes, com cobertura acima de 95%: diálogos completos (`chat.send("oi")` → resposta e estado), regras do banco, disputa de horário, webhook com a API da Meta simulada (respx), IA com um LLM falso e o painel. O CI roda lint, formatação e testes a cada push.
+São mais de 400 testes, com cobertura acima de 95%: diálogos completos (`chat.send("oi")` → resposta e estado), regras do banco, disputa de horário, webhook com a API da Meta simulada (respx), IA com um LLM falso e o painel, além de testes ponta a ponta no navegador com Playwright. O CI roda lint, formatação, testes e E2E a cada push.
 
 ## Aviso
 
