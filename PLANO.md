@@ -355,4 +355,10 @@ Observações:
 
 ## 12. Pendências externas
 
-- **Pendente:** conta de desenvolvedor na Meta para o teste real da Fase 3 (passo a passo em `docs/whatsapp-setup.md`) e chave do Groq para validar a Fase 4 com o provedor real (`scripts/eval_llm.py`). O código não depende delas: tudo roda e é testado sem.
+Tudo o que depende de conta, credencial ou publicação do usuário. O código não depende de nenhum destes itens: roda e é testado sem eles.
+
+- **Conta de desenvolvedor na Meta:** conectar o número de teste (`docs/whatsapp-setup.md`), fazer a conversa real de ponta a ponta (Fase 3) e gravar o vídeo de 60 a 90 s (Fase 6, roteiro na seção 10).
+- **Template de lembrete:** cadastrar e aprovar `lembrete_consulta` na Meta (texto em `docs/whatsapp-setup.md`) e ligar `REMINDERS_ENABLED`.
+- **Chave do Groq:** rodar `uv run python -m scripts.eval_llm` contra o provedor real (Fase 4) e conferir o modelo atual em console.groq.com/docs/models.
+- **Releases no GitHub:** publicar com `gh release create v1.0.0 --title v1.0.0 --notes-file docs/release-v1.0.0.md` e `gh release create v1.1.0 --title v1.1.0 --notes-file docs/release-v1.1.0.md` (criar conteúdo público é bloqueado para o assistente).
+- **Demo pública:** escolher a hospedagem (ex.: Fly.io, Render ou VPS); o container já está pronto.
