@@ -52,37 +52,17 @@ class WhatsAppClient:
 
     def send_text(self, to: str, text: str) -> str | None:
         """Envia texto e devolve o id da mensagem na Meta."""
-        body = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": to,
-            "type": "text",
-            "text": {"preview_url": False, "body": text[:MAX_TEXT_LENGTH]},
-        }
-        data = self._post(body, to)
-        messages = data.get("messages") or [{}]
-        return messages[0].get("id")
+        return self._send(to, "text", {"preview_url": False, "body": text[:MAX_TEXT_LENGTH]})
 
     def send_interactive(self, to: str, interactive: dict[str, Any]) -> str | None:
-        body = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": to,
-            "type": "interactive",
-            "interactive": interactive,
-        }
-        data = self._post(body, to)
-        messages = data.get("messages") or [{}]
-        return messages[0].get("id")
+        return self._send(to, "interactive", interactive)
 
     def send_template(self, to: str, name: str, language: str, parameters: list[str]) -> str | None:
         """Mensagem de template aprovado (única permitida fora da janela de 24 h)."""
-        body = {
-            "messaging_product": "whatsapp",
-            "recipient_type": "individual",
-            "to": to,
-            "type": "template",
-            "template": {
+        return self._send(
+            to,
+            "template",
+            {
                 "name": name,
                 "language": {"code": language},
                 "components": [
@@ -92,9 +72,18 @@ class WhatsAppClient:
                     }
                 ],
             },
+        )
+
+    def _send(self, to: str, kind: str, content: dict[str, Any]) -> str | None:
+        """Envelope comum das mensagens; devolve o id da mensagem na Meta."""
+        body = {
+            "messaging_product": "whatsapp",
+            "recipient_type": "individual",
+            "to": to,
+            "type": kind,
+            kind: content,
         }
-        data = self._post(body, to)
-        messages = data.get("messages") or [{}]
+        messages = self._post(body, to).get("messages") or [{}]
         return messages[0].get("id")
 
     def send_reply(self, to: str, reply: Reply, *, interactive: bool = True) -> str | None:
