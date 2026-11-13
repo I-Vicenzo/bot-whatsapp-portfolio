@@ -135,9 +135,33 @@ class SpecialtyInfo(_Model):
     def match_terms(self) -> tuple[str, ...]:
         """Termos normalizados que identificam a especialidade no texto, do mais longo ao mais
         curto (o mais específico ganha)."""
+        terms = set(self.specialty_terms) | self._professional_terms()
+        return tuple(sorted(terms - {""}, key=len, reverse=True))
+
+    @cached_property
+    def specialty_terms(self) -> frozenset[str]:
+        """Nome, slug e apelidos: não podem se repetir entre especialidades. O nome do
+        profissional fica de fora porque o mesmo profissional pode atender em duas."""
         terms = {normalize(self.name), normalize(self.slug.replace("-", " "))}
         terms.update(normalize(alias) for alias in self.aliases)
-        return tuple(sorted(terms - {""}, key=len, reverse=True))
+        return frozenset(terms - {""})
+
+    def _professional_terms(self) -> set[str]:
+        """Termos do profissional. "Dra. Helena Prado" → "dra helena prado", "helena prado",
+        "dra helena", "doutora helena" e "doutora helena prado". O primeiro nome sozinho não
+        entra: é comum demais para identificar o profissional."""
+        words = normalize(self.professional).split()
+        titles = {"dr": "doutor", "dra": "doutora", "doutor": "doutor", "doutora": "doutora"}
+        if len(words) < 2 or words[0] not in titles:
+            return {" ".join(words)} if len(words) > 1 else set()
+        title, names = words[0], words[1:]
+        long_title = titles[title]
+        full_name = " ".join(names)
+        terms = {f"{title} {full_name}", f"{long_title} {full_name}"}
+        terms |= {f"{title} {names[0]}", f"{long_title} {names[0]}"}
+        if len(names) > 1:
+            terms.add(full_name)
+        return terms
 
 
 class FaqEntry(_Model):
@@ -199,7 +223,7 @@ class ClinicData(_Model):
             raise ValueError(f"slugs de especialidade repetidos: {slugs}")
         owner: dict[str, str] = {}
         for spec in self.specialties:
-            for term in spec.match_terms:
+            for term in sorted(spec.specialty_terms):
                 if owner.setdefault(term, spec.slug) != spec.slug:
                     raise ValueError(
                         f'o termo "{term}" identifica duas especialidades: '

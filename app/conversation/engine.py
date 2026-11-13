@@ -243,6 +243,11 @@ class ConversationEngine:
 
         if intent is Intent.HUMAN:
             return self._handoff(turn, urgent=False)
+        if intent is Intent.THIRD_PARTY:
+            # "Agenda do Dr. X" ou "do cardiologista": é agendar com ele, não dado de terceiro.
+            if self._match_specialty(turn.text) is not None:
+                return self._start_booking(turn)
+            return EngineResult([Reply(texts.THIRD_PARTY_PRIVACY)], intent)
         if intent is Intent.BOOK:
             return self._start_booking(turn)
         if intent is Intent.MY_APPOINTMENTS:

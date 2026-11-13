@@ -13,6 +13,7 @@ class Intent(StrEnum):
     MENU = "menu"
     ERASE_DATA = "erase_data"
     CANCEL = "cancel"
+    THIRD_PARTY = "third_party"
     MY_APPOINTMENTS = "my_appointments"
     BOOK = "book"
     ADDRESS = "address"
@@ -25,8 +26,9 @@ class Intent(StrEnum):
 
 
 GLOBAL_INTENTS = (Intent.URGENT, Intent.HUMAN, Intent.MENU, Intent.ERASE_DATA)
+# THIRD_PARTY antes de tudo: "agenda do paciente X" também casa com BOOK ("agenda").
 # CANCEL antes: "cancela minha consulta" também casa com MY_APPOINTMENTS.
-ACTION_INTENTS = (Intent.CANCEL, Intent.MY_APPOINTMENTS, Intent.BOOK)
+ACTION_INTENTS = (Intent.THIRD_PARTY, Intent.CANCEL, Intent.MY_APPOINTMENTS, Intent.BOOK)
 INFO_INTENTS = (
     Intent.ADDRESS,
     Intent.HOURS,
@@ -57,6 +59,14 @@ _PATTERNS: dict[Intent, re.Pattern[str]] = {
         r"|consultas? (agendadas?|marcadas?))\b"
     ),
     Intent.CANCEL: _rx(r"\b(cancel\w*|desmarc\w*)\b"),
+    # Agenda de outra pessoa ("do paciente X", "agenda do Fernando"). Palavras de data/lugar não
+    # são pessoas: "agenda da semana" segue como agendamento. "Agenda do Dr. X" casa aqui, mas o
+    # engine reconhece o profissional e agenda com ele.
+    Intent.THIRD_PARTY: _rx(
+        r"\b(do|da|dos|das) pacientes?\b"
+        r"|\bagenda (do|da) (?!(semana|tarde|manha|noite|mes|dia|clinica|hoje|amanha|proxim[oa]"
+        r"|segunda|terca|quarta|quinta|sexta|sabado|domingo)\b)[a-z]+"
+    ),
     Intent.BOOK: _rx(
         r"\b(ag[ae]nd\w*|marcar|nova consulta|tem (horario|vaga)s?"
         r"|(quero|queria|gostaria de|preciso de|preciso) (uma |de uma )?consulta)\b"

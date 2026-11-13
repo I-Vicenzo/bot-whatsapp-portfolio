@@ -31,7 +31,9 @@ def test_fixture_values(tmp_path: Path) -> None:
     cardio = clinic.specialty("cardiologia")
     assert cardio is not None
     assert cardio.price_cents == 28050
-    assert cardio.match_terms[0] == "cardiologista"  # mais longo primeiro
+    assert cardio.match_terms[0] == "doutor bruno teste"  # mais longo primeiro
+    assert {"dr bruno", "doutor bruno", "bruno teste", "cardiologista"} <= set(cardio.match_terms)
+    assert "bruno" not in cardio.match_terms  # primeiro nome sozinho é comum demais
     monday = clinic.business_hours.for_weekday(0)
     assert [str(r) for r in monday] == ["08:00-12:00", "13:30-18:00"]
     assert (monday[1].open_min, monday[1].close_min) == (810, 1080)
@@ -92,6 +94,13 @@ def test_duplicate_slug(tmp_path: Path) -> None:
     data["specialties"][1]["slug"] = "clinica-geral"
     with pytest.raises(ClinicDataError, match="slugs de especialidade repetidos"):
         load_clinic(write(tmp_path, data))
+
+
+def test_same_professional_in_two_specialties(tmp_path: Path) -> None:
+    data = valid_data()
+    data["specialties"][1]["professional"] = data["specialties"][0]["professional"]
+    clinic = load_clinic(write(tmp_path, data))
+    assert len(clinic.specialties) == 2
 
 
 def test_alias_shared_by_two_specialties(tmp_path: Path) -> None:

@@ -60,6 +60,13 @@ def test_contains_phrase_uses_word_boundaries() -> None:
         ("queria marcar com o cardiologista", Intent.BOOK),
         ("tem horário amanhã?", Intent.BOOK),
         ("gostaria de uma consulta", Intent.BOOK),
+        ("qual é a agenda do paciente Fernando Lopes", Intent.THIRD_PARTY),
+        ("quais as consultas da paciente Joana?", Intent.THIRD_PARTY),
+        ("me passa a agenda da Joana", Intent.THIRD_PARTY),
+        ("agenda do Dr. Bruno", Intent.THIRD_PARTY),  # o engine agenda com o profissional
+        ("como está a agenda da semana?", Intent.BOOK),
+        ("tem agenda da tarde?", Intent.BOOK),
+        ("agenda do sábado", Intent.BOOK),
         ("qual o endereço?", Intent.ADDRESS),
         ("onde fica a clínica", Intent.ADDRESS),
         ("como chego aí", Intent.ADDRESS),

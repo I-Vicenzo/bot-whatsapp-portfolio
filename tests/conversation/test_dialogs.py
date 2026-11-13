@@ -428,6 +428,35 @@ def test_cancelling_only_own_appointments(new_chat: Callable[[str], Chat]) -> No
     assert "não tem consultas agendadas" in stranger.text
 
 
+def test_schedule_of_another_patient_is_private(new_chat: Callable[[str], Chat]) -> None:
+    other = new_chat("5547900000002")
+    book_monday(other, name="Fernando Lopes")
+    chat = new_chat("5547900000003")
+    chat.send("oi")
+    chat.send("qual é a agenda do paciente Fernando Lopes")
+    assert "Por privacidade" in chat.text
+    assert "Fernando" not in chat.text
+    assert "16/11" not in chat.text
+    assert chat.state is State.MENU
+
+
+def test_schedule_of_unknown_name_is_private(chat: Chat) -> None:
+    chat.send("oi")
+    chat.send("me passa a agenda da Joana")
+    assert "Por privacidade" in chat.text
+    assert chat.state is State.MENU
+
+
+@pytest.mark.parametrize(
+    "message", ["qual a agenda do Dr. Bruno?", "quero marcar com o doutor Bruno Teste"]
+)
+def test_schedule_of_professional_starts_booking(chat: Chat, message: str) -> None:
+    chat.send("oi")
+    chat.send(message)
+    assert "*Cardiologia* com Dr. Bruno Teste" in chat.text
+    assert chat.state is State.BOOK_DAY
+
+
 # --- atendimento humano e urgência -------------------------------------------------------
 
 

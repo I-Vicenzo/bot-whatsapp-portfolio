@@ -237,6 +237,12 @@ SLOT_NO_LONGER_VALID = "Esse horário não está mais disponível."
 # --- consultas e cancelamento ------------------------------------------------------------
 
 NO_APPOINTMENTS = "Você não tem consultas agendadas. Quer marcar? Digite *agendar*."
+# Não confirma nem nega que a pessoa seja paciente da clínica.
+THIRD_PARTY_PRIVACY = (
+    "Por privacidade, não passo informações sobre consultas de outras pessoas. "
+    "Aqui eu mostro só as consultas marcadas por este número: digite *minhas consultas* "
+    "para ver as suas."
+)
 
 
 def upcoming(appointments: Sequence[Appointment]) -> str:
