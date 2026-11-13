@@ -21,10 +21,10 @@
       <form id="login-form" class="card login-card" autocomplete="on">
         <h1>Painel do atendente</h1>
         <label for="username">Usuário</label>
-        <input id="username" name="username" autocomplete="username" required />
+        <input id="username" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required />
         <label for="password">Senha</label>
         <input id="password" name="password" type="password" autocomplete="current-password" required />
-        <button type="submit" class="primary">Entrar</button>
+        <button type="submit" class="primary" id="login-submit">Entrar</button>
         <p class="error" id="login-error" role="alert"></p>
         <p class="hint" id="demo-credentials" hidden></p>
         <p class="hint"><a href="/">Abrir o simulador do cliente</a></p>
@@ -35,13 +35,13 @@
     <div id="app-view" hidden>
       <header class="topbar">
         <h1>Painel do atendente</h1>
-        <nav class="tabs" role="tablist">
-          <button type="button" role="tab" data-tab="queue" aria-selected="true">
+        <nav class="tabs" aria-label="Seções do painel">
+          <button type="button" data-tab="queue" aria-current="page">
             Fila <span class="badge" id="queue-count">0</span>
           </button>
-          <button type="button" role="tab" data-tab="all">Conversas</button>
-          <button type="button" role="tab" data-tab="appointments">Agendamentos</button>
-          <button type="button" role="tab" data-tab="metrics">Métricas</button>
+          <button type="button" data-tab="all">Conversas</button>
+          <button type="button" data-tab="appointments">Agendamentos</button>
+          <button type="button" data-tab="metrics">Métricas</button>
         </nav>
         <div class="user">
           <a href="/" target="_blank" rel="noopener">Simulador</a>
@@ -57,6 +57,7 @@
         </section>
 
         <section class="detail card" aria-label="Conversa selecionada">
+          <p class="error detail-error" id="detail-error" role="alert"></p>
           <div id="detail-empty" class="empty">Selecione uma conversa.</div>
           <div id="detail" hidden>
             <div class="detail-head">
@@ -75,8 +76,8 @@
             </p>
             <div class="messages" id="messages"></div>
             <form id="reply-form" class="composer">
-              <input id="reply-text" maxlength="2000" placeholder="Responder ao cliente" aria-label="Resposta" required />
-              <button type="submit" class="primary">Enviar</button>
+              <input id="reply-text" maxlength="2000" placeholder="Responder ao cliente…" aria-label="Resposta" required />
+              <button type="submit" class="primary" id="reply-send">Enviar</button>
             </form>
             <p class="error" id="reply-error" role="alert"></p>
           </div>
@@ -108,7 +109,7 @@
                 <th>Telefone</th>
                 <th>Canal</th>
                 <th>Status</th>
-                <th></th>
+                <th><span class="visually-hidden">Ações</span></th>
               </tr>
             </thead>
             <tbody id="appointment-rows"></tbody>

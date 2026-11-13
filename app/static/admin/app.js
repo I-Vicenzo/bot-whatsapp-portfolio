@@ -9,7 +9,16 @@ const CHANNEL = { whatsapp: "WhatsApp", simulator: "Simulador", admin: "Painel" 
 const WEEKDAYS = ["dom", "seg", "ter", "qua", "qui", "sex", "sáb"];
 
 const $ = (id) => document.getElementById(id);
-const state = { tab: "queue", selected: null, timer: null, specialtiesLoaded: false };
+// `selected`: conversa pedida por último; `shown`: conversa que está na tela.
+// `signatures`: última resposta renderizada de cada lista, para não redesenhar à toa.
+const state = {
+  tab: "queue",
+  selected: null,
+  shown: null,
+  timer: null,
+  specialtiesLoaded: false,
+  signatures: {},
+};
 
 // --- utilidades -----------------------------------------------------------------------------
 
@@ -36,10 +45,29 @@ function appendFormatted(parent, text) {
   parent.append(document.createTextNode(text.slice(last)));
 }
 
+// A API manda o horário de parede da clínica sem fuso ("2026-03-10T14:30:00"). Lê os campos
+// direto do texto: `new Date()` converteria para o fuso do navegador.
 function fmtDateTime(iso) {
-  const d = new Date(iso);
-  const pad = (n) => String(n).padStart(2, "0");
-  return `${WEEKDAYS[d.getDay()]} ${pad(d.getDate())}/${pad(d.getMonth() + 1)} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const match = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/.exec(iso);
+  if (!match) return iso;
+  const [, year, month, day, hour, minute] = match;
+  const weekday = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day))).getUTCDay();
+  return `${WEEKDAYS[weekday]} ${day}/${month} ${hour}:${minute}`;
+}
+
+// Redesenha só se a resposta mudou, devolvendo o foco ao mesmo item (data-id) depois.
+function renderIfChanged(key, data, container, render) {
+  const signature = JSON.stringify(data);
+  if (state.signatures[key] === signature) return false;
+  state.signatures[key] = signature;
+  const focusedId = container.contains(document.activeElement)
+    ? document.activeElement.dataset.id
+    : undefined;
+  container.replaceChildren(...data.map(render));
+  if (focusedId !== undefined) {
+    container.querySelector(`[data-id="${CSS.escape(focusedId)}"]`)?.focus();
+  }
+  return true;
 }
 
 function fmtWaiting(minutes) {
@@ -93,6 +121,9 @@ async function showLogin() {
 $("login-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   $("login-error").textContent = "";
+  const submit = $("login-submit");
+  submit.disabled = true;
+  submit.textContent = "Entrando…";
   try {
     const user = await api("/api/admin/login", {
       method: "POST",
@@ -102,12 +133,17 @@ $("login-form").addEventListener("submit", async (event) => {
     startApp(user);
   } catch (error) {
     $("login-error").textContent = error.message;
+  } finally {
+    submit.disabled = false;
+    submit.textContent = "Entrar";
   }
 });
 
 $("logout").addEventListener("click", async () => {
   try {
     await api("/api/admin/logout", { method: "POST" });
+  } catch {
+    /* sai da tela mesmo assim; o cookie expira sozinho */
   } finally {
     showLogin();
   }
@@ -130,8 +166,10 @@ document.querySelectorAll("[data-tab]").forEach((button) => {
 
 function selectTab(tab) {
   state.tab = tab;
+  state.signatures = {}; // as abas dividem a mesma lista: redesenha na troca
   document.querySelectorAll("[data-tab]").forEach((b) => {
-    b.setAttribute("aria-selected", String(b.dataset.tab === tab));
+    if (b.dataset.tab === tab) b.setAttribute("aria-current", "page");
+    else b.removeAttribute("aria-current");
   });
   $("conversations-view").hidden = tab === "appointments" || tab === "metrics";
   $("appointments-view").hidden = tab !== "appointments";
@@ -161,15 +199,16 @@ async function updateQueueCount() {
 }
 
 async function loadConversations() {
-  const query = state.tab === "queue" ? "?status=waiting_human" : "";
+  const tab = state.tab;
+  const query = tab === "queue" ? "?status=waiting_human" : "";
   let items;
   try {
     items = await api(`/api/admin/conversations${query}`);
   } catch {
     return;
   }
-  const list = $("conversation-list");
-  list.replaceChildren(...items.map(renderListItem));
+  if (tab !== state.tab) return; // resposta da aba anterior
+  renderIfChanged("conversations", items, $("conversation-list"), renderListItem);
   $("list-empty").hidden = items.length > 0;
   if (state.selected) loadDetail(state.selected, { quiet: true });
 }
@@ -206,19 +245,28 @@ function renderListItem(item) {
   return el("li", {}, button);
 }
 
+function markSelected(id) {
+  document.querySelectorAll("#conversation-list button").forEach((b) => {
+    b.setAttribute("aria-current", String(b.dataset.id === String(id)));
+  });
+}
+
 async function loadDetail(id, { quiet = false } = {}) {
+  if (!quiet) {
+    state.selected = id;
+    markSelected(id);
+  }
   let detail;
   try {
     detail = await api(`/api/admin/conversations/${id}`);
   } catch (error) {
-    if (!quiet) $("reply-error").textContent = error.message;
+    if (!quiet && id === state.selected) $("detail-error").textContent = error.message;
     return;
   }
-  const changed = state.selected !== id;
-  state.selected = id;
-  document.querySelectorAll("#conversation-list button").forEach((b) => {
-    b.setAttribute("aria-current", String(b.dataset.id === String(id)));
-  });
+  if (id !== state.selected) return; // o atendente já clicou em outra conversa
+  $("detail-error").textContent = "";
+  const changed = state.shown !== id;
+  state.shown = id;
 
   $("detail-empty").hidden = true;
   $("detail").hidden = false;
@@ -235,17 +283,17 @@ async function loadDetail(id, { quiet = false } = {}) {
   $("release").disabled = detail.status === "bot";
   $("window-warning").hidden = detail.window_open;
   $("reply-text").disabled = !detail.window_open;
+  $("reply-send").disabled = !detail.window_open;
 
   const box = $("messages");
   const atBottom = box.scrollHeight - box.scrollTop - box.clientHeight < 40;
-  box.replaceChildren(
-    ...detail.messages.map((m) => {
-      const bubble = el("div", { className: `msg ${m.author}` });
-      bubble.append(el("span", { className: "who", text: `${AUTHOR[m.author] ?? m.author} · ${fmtDateTime(m.created_at)}` }));
-      appendFormatted(bubble, m.text);
-      return bubble;
-    }),
-  );
+  if (changed) delete state.signatures.messages;
+  renderIfChanged("messages", detail.messages, box, (m) => {
+    const bubble = el("div", { className: `msg ${m.author}` });
+    bubble.append(el("span", { className: "who", text: `${AUTHOR[m.author] ?? m.author} · ${fmtDateTime(m.created_at)}` }));
+    appendFormatted(bubble, m.text);
+    return bubble;
+  });
   if (changed || atBottom) box.scrollTop = box.scrollHeight;
 }
 
@@ -305,29 +353,29 @@ async function loadAppointments() {
   } catch {
     return;
   }
-  $("appointment-rows").replaceChildren(
-    ...rows.map((a) => {
-      const cancel =
-        a.status === "confirmed"
-          ? el("button", {
-              type: "button",
-              text: "Cancelar",
-              onclick: () => cancelAppointment(a),
-            })
-          : null;
-      return el(
-        "tr",
-        { className: a.status },
-        el("td", { text: fmtDateTime(a.starts_at) }),
-        el("td", { text: `${a.specialty} (${a.professional})` }),
-        el("td", { text: a.patient_name }),
-        el("td", { text: a.patient_phone }),
-        el("td", { text: CHANNEL[a.channel] ?? a.channel }),
-        el("td", { text: a.status === "confirmed" ? "Confirmada" : "Cancelada" }),
-        el("td", {}, cancel),
-      );
-    }),
-  );
+  renderIfChanged("appointments", rows, $("appointment-rows"), (a) => {
+    const cancel =
+      a.status === "confirmed"
+        ? el("button", {
+            type: "button",
+            text: "Cancelar",
+            "data-id": String(a.id),
+            "aria-label": `Cancelar consulta de ${a.patient_name}, ${fmtDateTime(a.starts_at)}`,
+            onclick: () => cancelAppointment(a),
+          })
+        : null;
+    return el(
+      "tr",
+      { className: a.status },
+      el("td", { className: "num", text: fmtDateTime(a.starts_at) }),
+      el("td", { text: `${a.specialty} (${a.professional})` }),
+      el("td", { text: a.patient_name }),
+      el("td", { className: "num", text: a.patient_phone }),
+      el("td", { text: CHANNEL[a.channel] ?? a.channel }),
+      el("td", { text: a.status === "confirmed" ? "Confirmada" : "Cancelada" }),
+      el("td", {}, cancel),
+    );
+  });
   $("appointments-empty").hidden = rows.length > 0;
 }
 

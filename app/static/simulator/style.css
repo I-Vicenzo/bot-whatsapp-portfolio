@@ -5,7 +5,10 @@
   --muted: #5d6b7a;
   --border: #dde3ea;
   --accent: #0f7a5c;
+  /* fundo atrás de texto branco: precisa de contraste >= 4.5:1 nos dois temas */
+  --accent-strong: #0f7a5c;
   --accent-text: #ffffff;
+  --danger: #c0392b;
   --chat-bg: #ece5dd;
   --bubble-in: #ffffff;
   --bubble-out: #d9fdd3;
@@ -27,6 +30,8 @@
     --muted: #9aa8b6;
     --border: #2a3542;
     --accent: #23a57f;
+    --accent-strong: #0f7a5c;
+    --danger: #ff8a80;
     --chat-bg: #0b141a;
     --bubble-in: #202c33;
     --bubble-out: #005c4b;
@@ -54,6 +59,15 @@ body {
 button,
 input {
   font: inherit;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
+:where(a, button, input, [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .banner {
@@ -140,7 +154,7 @@ h1 {
   gap: 10px;
   align-items: center;
   padding: 10px 14px;
-  background: var(--accent);
+  background: var(--accent-strong);
   color: var(--accent-text);
 }
 
@@ -224,6 +238,7 @@ h1 {
 }
 
 .options:not(:empty) {
+  padding-top: 4px; /* espaço para o contorno de foco */
   padding-bottom: 8px;
 }
 
@@ -236,8 +251,12 @@ h1 {
   cursor: pointer;
 }
 
-.options button:hover {
+.options button:hover:not(:disabled) {
   background: var(--chip-on);
+}
+
+.options button:disabled {
+  opacity: 0.5;
 }
 
 .composer {
@@ -262,13 +281,14 @@ h1 {
   width: 44px;
   border: 0;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--accent-strong);
   color: var(--accent-text);
   cursor: pointer;
 }
 
 .composer button:disabled {
   opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .side {
@@ -311,8 +331,19 @@ h1 {
   color: var(--text);
 }
 
-.row input:invalid {
-  border-color: #c0392b;
+.row input:invalid,
+.row input[aria-invalid="true"] {
+  border-color: var(--danger);
+}
+
+.field-hint {
+  font-size: 12px;
+  color: var(--muted);
+  margin: 4px 0 0;
+}
+
+.field-hint.error {
+  color: var(--danger);
 }
 
 .secondary,
@@ -325,9 +356,15 @@ h1 {
   cursor: pointer;
 }
 
-.secondary:hover,
-.scenarios button:hover {
+.secondary:hover:not(:disabled),
+.scenarios button:hover:not(:disabled) {
   border-color: var(--accent);
+}
+
+.secondary:disabled,
+.scenarios button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .wide {

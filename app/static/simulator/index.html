@@ -21,7 +21,7 @@
         <h1 id="clinic-name">Assistente virtual</h1>
         <p class="subtitle">Simulador: o mesmo motor de conversa que atende no WhatsApp</p>
       </div>
-      <div class="chips" aria-label="Status das integrações">
+      <div class="chips" role="group" aria-label="Status das integrações">
         <span class="chip" id="chip-whatsapp">WhatsApp: …</span>
         <span class="chip" id="chip-ai">IA: …</span>
         <a class="chip link" href="/docs" target="_blank" rel="noopener">API</a>
@@ -37,14 +37,14 @@
             <div class="phone-sub">assistente virtual</div>
           </div>
         </div>
-        <div class="messages" id="messages" aria-live="polite"></div>
+        <div class="messages" id="messages" role="log" aria-live="polite" aria-label="Mensagens"></div>
         <div class="options" id="options"></div>
         <form class="composer" id="composer" autocomplete="off">
           <input
             id="input"
             name="text"
             maxlength="1000"
-            placeholder="Escreva uma mensagem"
+            placeholder="Escreva uma mensagem…"
             aria-label="Mensagem"
             required
           />
@@ -57,11 +57,20 @@
           <h2>Cliente</h2>
           <label for="contact">Número fictício</label>
           <div class="row">
-            <input id="contact" inputmode="numeric" pattern="\d{8,15}" maxlength="15" />
-            <button type="button" class="secondary" id="new-contact" title="Gerar outro número">
+            <input
+              id="contact"
+              name="contact"
+              autocomplete="off"
+              inputmode="numeric"
+              pattern="\d{8,15}"
+              maxlength="15"
+              aria-describedby="contact-hint"
+            />
+            <button type="button" class="secondary" id="new-contact" title="Gerar outro número" aria-label="Novo número">
               Novo
             </button>
           </div>
+          <p class="field-hint" id="contact-hint">Só números, de 8 a 15 dígitos.</p>
           <p class="hint">
             Cada aba é um cliente. Abra outra aba para simular dois clientes disputando o mesmo
             horário.
