@@ -84,12 +84,12 @@ class Settings(BaseSettings):
 
     @property
     def ai_enabled(self) -> bool:
-        return self.llm_enabled and self.llm_api_key is not None
+        return self.llm_enabled and bool(self.llm_api_key)  # vazia no .env = sem chave
 
     @property
     def transcription_enabled(self) -> bool:
         """Usa o mesmo provedor e chave da IA (Groq por padrão)."""
-        return self.audio_transcription_enabled and self.llm_api_key is not None
+        return self.audio_transcription_enabled and bool(self.llm_api_key)
 
     @property
     def demo_mode(self) -> bool:
