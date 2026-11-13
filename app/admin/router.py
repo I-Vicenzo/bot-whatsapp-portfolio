@@ -199,6 +199,12 @@ def login_info(request: Request) -> LoginInfo:
     settings: Settings = request.app.state.settings
     if settings.app_env is AppEnv.DEV and uses_default_password(settings):
         return LoginInfo(demo_username=settings.admin_username, demo_password=DEFAULT_PASSWORD)
+    if settings.public_demo and settings.admin_password is not None:
+        # Demo pública: o login é parte da vitrine (o app recusa iniciar com WhatsApp ligado).
+        return LoginInfo(
+            demo_username=settings.admin_username,
+            demo_password=settings.admin_password.get_secret_value(),
+        )
     return LoginInfo(demo_username=None, demo_password=None)
 
 

@@ -131,6 +131,14 @@ Quando dois clientes confirmam o mesmo horário ao mesmo tempo, o índice decide
 
 Todas as variáveis estão em [.env.example](.env.example).
 
+## Demo pública (Render, plano gratuito)
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/I-Vicenzo/bot-whatsapp-portfolio)
+
+O [render.yaml](render.yaml) sobe o container em modo de demonstração (`PUBLIC_DEMO=true`): dados fictícios, login do painel exibido na tela e banco recriado a cada reinício. No plano gratuito o serviço dorme após 15 minutos sem acesso; o primeiro acesso depois disso leva perto de um minuto.
+
+Com `PUBLIC_DEMO=true` o app **recusa iniciar se o WhatsApp estiver configurado**: o painel aberto mostraria números e mensagens de pessoas reais. O WhatsApp real roda em outra instância (ou localmente, com túnel), com senha própria.
+
 ## Desenvolvimento e testes
 
 Requer [uv](https://docs.astral.sh/uv/) e Python 3.14.

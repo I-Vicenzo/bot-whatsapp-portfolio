@@ -335,6 +335,7 @@ Revisão com `/code-review` (backend) e as Web Interface Guidelines (interface).
 | `DATABASE_URL` | Banco | `sqlite:///./var/app.db` |
 | `DATA_DIR` | Pasta com `clinica.yaml` e `textos.yaml` | `data` |
 | `DEMO_SEED` | Carrega dados de demonstração | `true` |
+| `PUBLIC_DEMO` | Demo pública: login do painel na tela; recusa iniciar com WhatsApp configurado | `false` |
 | `SESSION_SECRET` | Assina o cookie do painel | Gerado na inicialização, com aviso |
 | `ADMIN_USERNAME`, `ADMIN_PASSWORD` | Usuário inicial do painel | `admin` / `admin` (só fora de produção) |
 | `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_API_VERSION` | Cloud API | Vazias → WhatsApp desligado |
@@ -375,4 +376,4 @@ Tudo o que depende de conta, credencial ou publicação do usuário. O código n
 - **Conta de desenvolvedor na Meta:** conectar o número de teste (`docs/whatsapp-setup.md`), fazer a conversa real de ponta a ponta (Fase 3) e gravar o vídeo de 60 a 90 s (Fase 6, roteiro na seção 10).
 - **Template de lembrete:** cadastrar e aprovar `lembrete_consulta` na Meta (texto em `docs/whatsapp-setup.md`) e ligar `REMINDERS_ENABLED`.
 - **Chave do Groq:** rodar `uv run python -m scripts.eval_llm` contra o provedor real (Fase 4) e conferir o modelo atual em console.groq.com/docs/models.
-- **Demo pública:** escolher a hospedagem (Fly.io, Render ou VPS; o container já está pronto). Vercel não serve: SQLite efêmero e sem processo contínuo para o ciclo de lembretes. Pré-requisito resolvido na Fase 8: o simulador público já não enxerga consultas de pacientes do WhatsApp.
+- **Demo pública:** criar conta no Render (com GitHub) e aplicar o blueprint `render.yaml` (botão "Deploy to Render" no README); depois, colocar o link no README e na descrição do repositório. Escolhido o Render por ter plano gratuito para container Docker; Fly.io não tem mais plano gratuito para contas novas e Vercel não serve (SQLite efêmero e sem processo contínuo).

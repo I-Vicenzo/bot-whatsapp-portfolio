@@ -1,0 +1,36 @@
+# Demo pública no Render (plano gratuito). Ver "Demo pública" no README.
+#
+# No plano gratuito o serviço dorme após 15 min sem acesso (o primeiro acesso depois disso leva
+# perto de 1 min) e o disco é efêmero: o SQLite volta aos dados de demonstração a cada
+# reinício. Para uma vitrine com dados fictícios, isso é desejável.
+#
+# PUBLIC_DEMO mostra o login do painel na tela; por isso o app recusa iniciar se as variáveis
+# do WhatsApp forem preenchidas aqui. O WhatsApp real roda em outra instância, com senha própria.
+services:
+  - type: web
+    name: bot-whatsapp-portfolio
+    runtime: docker
+    plan: free
+    region: virginia
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PORT # porta que o Render encaminha; o Dockerfile escuta na 8000
+        value: "8000"
+      - key: APP_ENV
+        value: production
+      - key: PUBLIC_DEMO
+        value: "true"
+      - key: DEMO_SEED
+        value: "true"
+      - key: ADMIN_USERNAME
+        value: admin
+      - key: ADMIN_PASSWORD # pública de propósito: aparece na tela de login da demo
+        value: demo-portfolio
+      - key: SESSION_SECRET
+        generateValue: true
+      # IA de reserva (opcional): preencher LLM_API_KEY no painel do Render e ligar LLM_ENABLED.
+      - key: LLM_ENABLED
+        value: "false"
+      - key: LLM_API_KEY
+        sync: false

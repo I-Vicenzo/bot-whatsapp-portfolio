@@ -20,6 +20,9 @@ class Settings(BaseSettings):
     database_url: str = "sqlite:///./var/app.db"
     clinic_data_path: Path = Path("data/clinica.yaml")
     demo_seed: bool = True
+    # Demo pública: a tela de login do painel mostra ADMIN_USERNAME/ADMIN_PASSWORD para
+    # qualquer visitante. Por isso não pode rodar junto com o WhatsApp real.
+    public_demo: bool = False
     simulator_rate_limit_per_minute: int = 30
 
     session_secret: SecretStr | None = None
@@ -49,10 +52,16 @@ class Settings(BaseSettings):
     llm_daily_cap: int = 200
 
     def production_problems(self) -> list[str]:
-        """Configurações inseguras que impedem iniciar em produção."""
-        if self.app_env is not AppEnv.PRODUCTION:
-            return []
+        """Configurações inseguras que impedem iniciar (em produção, ou em qualquer ambiente
+        no caso da demo pública com WhatsApp)."""
         problems = []
+        if self.public_demo and self.whatsapp_enabled:
+            problems.append(
+                "PUBLIC_DEMO mostra o login do painel a qualquer visitante: não ligue o "
+                "WhatsApp real na mesma instância"
+            )
+        if self.app_env is not AppEnv.PRODUCTION:
+            return problems
         password = self.admin_password.get_secret_value() if self.admin_password else ""
         if len(password) < 12 or password == "admin":  # noqa: S105 - recusa a senha padrão
             problems.append("ADMIN_PASSWORD deve ter ao menos 12 caracteres e não ser a padrão")

@@ -412,6 +412,36 @@ def test_production_with_secure_config(tmp_path: Path, clock: FixedClock) -> Non
         assert "secure" in response.headers["set-cookie"].lower()
 
 
+def test_public_demo_shows_its_login_in_production(tmp_path: Path, clock: FixedClock) -> None:
+    settings = make_settings(
+        tmp_path,
+        app_env="production",
+        public_demo=True,
+        admin_password="demo-publica-123",
+        session_secret="s" * 40,
+    )
+    with TestClient(create_app(settings, clock=clock)) as client:
+        assert client.get("/api/admin/login-info").json() == {
+            "demo_username": "admin",
+            "demo_password": "demo-publica-123",
+        }
+        assert login(client, password="demo-publica-123").status_code == 200
+
+
+def test_public_demo_refuses_real_whatsapp(tmp_path: Path) -> None:
+    """Login exposto + WhatsApp real = mensagens e números de pessoas reais no painel aberto."""
+    settings = make_settings(
+        tmp_path,
+        public_demo=True,
+        whatsapp_token="t",
+        whatsapp_phone_number_id="99",
+        whatsapp_app_secret="s",
+        whatsapp_verify_token="v",
+    )
+    with pytest.raises(RuntimeError, match="PUBLIC_DEMO"):
+        create_app(settings)
+
+
 def test_demo_seed_creates_queue_with_urgent(tmp_path: Path, clock: FixedClock) -> None:
     with TestClient(create_app(make_settings(tmp_path), clock=clock)) as client:
         assert login(client).status_code == 200
