@@ -97,6 +97,9 @@ A cada 5 minutos o app envia o lembrete das consultas marcadas pelo WhatsApp que
 | "Verificar e salvar" falha | App fora do ar, túnel parado ou `WHATSAPP_VERIFY_TOKEN` diferente do digitado no painel |
 | Log `webhook com assinatura inválida` (HTTP 401) | `WHATSAPP_APP_SECRET` errado |
 | Webhook nunca chega | Campo **messages** não assinado, ou URL do túnel mudou (o túnel gratuito muda a cada execução) |
+| Webhook verificado, mas nenhum `POST` chega (nem status de entrega) | App não assinado na conta do WhatsApp (WABA). Assine com `curl -X POST "https://graph.facebook.com/v26.0/<WABA_ID>/subscribed_apps" -H "Authorization: Bearer <token>"`; o WABA ID é a "Identificação da conta do WhatsApp Business", na tela do número de teste |
+| Erro `133010 Account not registered` no envio | Número ainda não registrado na Cloud API (status `PENDING`). Registre com `POST /<PHONE_NUMBER_ID>/register` e corpo `{"messaging_product":"whatsapp","pin":"<6 dígitos>"}`; guarde o PIN (verificação em duas etapas) |
+| "O número +1 555… não está no WhatsApp" no celular | O número de teste só aparece depois de mandar a primeira mensagem: envie o template `hello_world` para o seu número e responda nessa conversa |
 | Erro `131030` no envio | Destinatário não cadastrado na lista do número de teste |
 | Erro `131030` com número brasileiro cadastrado | O `wa_id` pode chegar **sem o nono dígito** (ex.: `55 47 8888-7777` em vez de `55 47 98888-7777`). O bot responde para o `wa_id` exatamente como a Meta enviou; cadastre o número na lista de destinatários nesse mesmo formato |
 | Erro `190` | Token expirado ou revogado: gere outro (passo 2) |
