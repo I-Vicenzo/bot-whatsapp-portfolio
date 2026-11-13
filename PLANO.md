@@ -284,7 +284,7 @@ Observações:
 - [x] Prints e GIF do simulador e do painel (capturados com Playwright)
 - [ ] Vídeo curto com a integração real (roteiro na seção 10). **Pendência (usuário):** depende do número de teste da Meta (Fase 3)
 - [x] Repositório: descrição, tópicos, badge de CI, tag `v1.0.0`
-- [ ] Release `v1.0.0` no GitHub. **Pendência (usuário):** publicar com `gh release create v1.0.0 --title v1.0.0 --notes-file docs/release-v1.0.0.md` (a criação de conteúdo público é bloqueada para o assistente)
+- [x] Release `v1.0.0` no GitHub
 
 **Pronto quando:** clone + 3 comandos → demo funcionando em poucos minutos; CI verde.
 
@@ -313,6 +313,7 @@ Revisão com `/code-review` (backend) e as Web Interface Guidelines (interface).
 - [x] Painel: lista de conversas com `ORDER BY`/`LIMIT` no banco
 - [x] Interface: acessibilidade (foco, contraste AA no escuro, rótulos, regiões ao vivo) e corridas no polling do simulador e do painel
 - [x] Versão `1.1.1` em `app/__init__.py` e `pyproject.toml`, com teste que impede divergência
+- [x] Releases `v1.0.0`, `v1.1.0` e `v1.1.1` publicadas no GitHub (a `v1.1.1` é a mais recente)
 
 ## 8. Segurança (transversal)
 
@@ -374,5 +375,4 @@ Tudo o que depende de conta, credencial ou publicação do usuário. O código n
 - **Conta de desenvolvedor na Meta:** conectar o número de teste (`docs/whatsapp-setup.md`), fazer a conversa real de ponta a ponta (Fase 3) e gravar o vídeo de 60 a 90 s (Fase 6, roteiro na seção 10).
 - **Template de lembrete:** cadastrar e aprovar `lembrete_consulta` na Meta (texto em `docs/whatsapp-setup.md`) e ligar `REMINDERS_ENABLED`.
 - **Chave do Groq:** rodar `uv run python -m scripts.eval_llm` contra o provedor real (Fase 4) e conferir o modelo atual em console.groq.com/docs/models.
-- **Releases no GitHub:** com a conta `I-Vicenzo` ativa (`gh auth switch -u I-Vicenzo`), publicar `gh release create v1.0.0 --title v1.0.0 --notes-file docs/release-v1.0.0.md`, o mesmo para `v1.1.0` e `gh release create v1.1.1 --title v1.1.1 --notes-file docs/release-v1.1.1.md --latest` (criar conteúdo público é bloqueado para o assistente). A `v1.1.0` responde `1.0.0` no `/health`; a `v1.1.1` corrige.
 - **Demo pública:** escolher a hospedagem (Fly.io, Render ou VPS; o container já está pronto). Vercel não serve: SQLite efêmero e sem processo contínuo para o ciclo de lembretes. Pré-requisito resolvido na Fase 8: o simulador público já não enxerga consultas de pacientes do WhatsApp.
