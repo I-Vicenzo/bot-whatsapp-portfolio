@@ -142,6 +142,20 @@ def test_queue_puts_urgent_first(admin: TestClient, clock: FixedClock) -> None:
     assert everything[-1]["status"] == "bot"
 
 
+def test_conversation_list_keeps_queue_and_most_recent(
+    admin: TestClient, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """O corte é feito no banco: a fila sempre aparece; do resto, as conversas mais recentes."""
+    monkeypatch.setattr("app.admin.router.MAX_CONVERSATIONS", 3)
+    say(admin, "atendente", contact="5500900000001")
+    for contact in ("5500900000002", "5500900000003", "5500900000004"):
+        say(admin, "oi", contact=contact)
+    say(admin, "oi de novo", contact="5500900000002")
+
+    items = admin.get("/api/admin/conversations").json()
+    assert [i["contact"] for i in items] == ["5500900000001", "5500900000002", "5500900000004"]
+
+
 def test_conversation_detail(admin: TestClient) -> None:
     say(admin, "oi")
     say(admin, "atendente")

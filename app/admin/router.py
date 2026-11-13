@@ -40,6 +40,7 @@ from app.ratelimit import RateLimiter
 from app.scheduling import AppointmentNotFound, Scheduler
 
 router = APIRouter(prefix="/api/admin", tags=["painel"])
+MAX_CONVERSATIONS = 200
 CurrentUser = Annotated[User, Depends(current_user)]
 SameOrigin = Depends(check_origin)
 
@@ -129,20 +130,29 @@ def _now(request: Request) -> datetime:
     return request.app.state.clock.local_now()
 
 
-def _conversation_rows(session: Session, *where: object) -> list[tuple]:
+def _conversation_rows(
+    session: Session, *where: object, latest_first: bool = False, limit: int | None = None
+) -> list[tuple]:
+    # Subconsulta correlacionada: usa o índice (conversation_id, id) de `messages` por
+    # conversa, em vez de agrupar a tabela inteira de mensagens a cada atualização do painel.
     last_id = (
-        select(Message.conversation_id, func.max(Message.id).label("last_id"))
-        .group_by(Message.conversation_id)
-        .subquery()
+        select(func.max(Message.id))
+        .where(Message.conversation_id == Conversation.id)
+        .correlate(Conversation)
+        .scalar_subquery()
     )
     last = aliased(Message)
     query = (
         select(Conversation, last, User.name)
-        .outerjoin(last_id, last_id.c.conversation_id == Conversation.id)
-        .outerjoin(last, last.id == last_id.c.last_id)
+        .select_from(Conversation)
+        .outerjoin(last, last.id == last_id)
         .outerjoin(User, User.id == Conversation.assigned_to)
         .where(*where)  # type: ignore[arg-type]
     )
+    if latest_first:
+        query = query.order_by(last.id.desc().nulls_last(), Conversation.id.desc())
+    if limit is not None:
+        query = query.limit(limit)
     return list(session.execute(query).all())
 
 
@@ -240,9 +250,20 @@ def list_conversations(
 ) -> list[ConversationOut]:
     where = [Conversation.status == status_filter] if status_filter else []
     now = _now(request)
+    waiting = Conversation.status == ConversationStatus.WAITING_HUMAN
     with _session(request) as session:
-        items = [_to_out(row, now) for row in _conversation_rows(session, *where)]
-    return _order(items)[:200]
+        # A fila vem inteira (é curta e precisa da ordem de prioridade); o resto, só as mais
+        # recentes, com ORDER BY e LIMIT no banco.
+        rows = _conversation_rows(session, *where, waiting, limit=MAX_CONVERSATIONS)
+        rows += _conversation_rows(
+            session,
+            *where,
+            ~waiting,
+            latest_first=True,
+            limit=max(MAX_CONVERSATIONS - len(rows), 0),
+        )
+        items = [_to_out(row, now) for row in rows]
+    return _order(items)[:MAX_CONVERSATIONS]
 
 
 @router.get("/conversations/{conversation_id}")
