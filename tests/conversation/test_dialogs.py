@@ -504,3 +504,20 @@ def test_flow_within_30_minutes_continues(chat: Chat, clock: FixedClock) -> None
     clock.advance(timedelta(minutes=29))
     chat.send("10h")
     assert chat.state is State.BOOK_NAME
+
+
+def test_specialty_removed_mid_booking_restarts_flow(chat: Chat) -> None:
+    """A clínica tira a especialidade do clinica.yaml e reinicia: quem estava no meio do
+    agendamento recebe aviso e menu, em vez de silêncio."""
+    from sqlalchemy import update
+
+    from app.db.models import Specialty
+
+    chat.send("quero agendar cardiologia")
+    with chat.session_factory.begin() as session:
+        session.execute(
+            update(Specialty).where(Specialty.slug == "cardiologia").values(active=False)
+        )
+    chat.send("segunda")
+    assert "não está mais disponível" in chat.text
+    assert chat.state == State.MENU

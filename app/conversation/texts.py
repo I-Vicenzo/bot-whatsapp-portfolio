@@ -78,6 +78,7 @@ OFFER_HUMAN = (
 )
 THANKS = "Por nada! Se precisar de algo mais, é só chamar. " + BACK_TO_MENU
 FLOW_ABORTED = "Tudo bem, deixei o agendamento de lado."
+SPECIALTY_GONE = "Essa especialidade não está mais disponível para agendamento."
 EXPIRED = "Retomando do início, já que a conversa anterior ficou parada."
 
 HANDOFF = (

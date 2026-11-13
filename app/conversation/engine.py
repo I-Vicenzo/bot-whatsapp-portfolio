@@ -153,7 +153,15 @@ class ConversationEngine:
             )
             if expired:
                 self._reset(turn)
-            result = self._dispatch(turn, is_new=previous_inbound is None)
+            try:
+                result = self._dispatch(turn, is_new=previous_inbound is None)
+            except SpecialtyNotFound:
+                # A especialidade do fluxo saiu do clinica.yaml (ou foi desativada) no meio do
+                # agendamento: recomeça em vez de deixar o cliente sem resposta.
+                self._reset(turn)
+                result = EngineResult(
+                    [Reply(texts.SPECIALTY_GONE), self._menu()], source=Source.RULE
+                )
             if result.pending_ai is not None:
                 conversation.context = turn.ctx
                 pending = PendingAI(result.pending_ai.question, result.pending_ai.is_new, expired)
