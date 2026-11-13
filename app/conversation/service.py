@@ -26,6 +26,7 @@ from app.db.models import (
     Channel,
     Conversation,
     ConversationStatus,
+    ErasedMessageId,
     Handoff,
     Message,
     Priority,
@@ -64,7 +65,7 @@ class Debug:
 
 @dataclass
 class InboundResult:
-    conversation_id: int
+    conversation_id: int | None  # None: reenvio de mensagem já apagada (LGPD)
     replies: list[Reply] = field(default_factory=list)
     message_ids: list[int] = field(default_factory=list)
     duplicate: bool = False
@@ -102,6 +103,8 @@ class ConversationService:
         a chamada ao provedor roda fora dela (no SQLite, a transação de escrita trava o banco
         inteiro); a segunda grava a resposta."""
         with self.session_factory.begin() as session:
+            if external_id and session.get(ErasedMessageId, external_id) is not None:
+                return InboundResult(None, duplicate=True)  # reenvio de mensagem já apagada
             conversation = self.get_or_create(session, channel, contact)
             if display_name:
                 conversation.display_name = display_name
@@ -179,6 +182,14 @@ class ConversationService:
                 appointment.cancelled_at = now
             appointment.patient_name = texts.ERASED_PATIENT_NAME
             appointment.patient_phone = f"removido-{appointment.id}"
+        # Os ids da Meta continuam valendo para a deduplicação: um reenvio do "sim" não pode
+        # recriar a conversa que acabou de ser apagada.
+        external_ids = session.scalars(
+            select(Message.external_id).where(
+                Message.conversation_id == conversation.id, Message.external_id.is_not(None)
+            )
+        ).all()
+        session.add_all(ErasedMessageId(external_id=eid) for eid in external_ids if eid)
         session.flush()
         session.delete(conversation)
         session.flush()
@@ -194,8 +205,11 @@ class ConversationService:
         """Atalho para evitar trabalho caro (ex.: transcrição) em reenvios da Meta. A garantia
         continua sendo o índice único em `receive`."""
         with self.session_factory() as session:
-            found = session.scalar(select(Message.id).where(Message.external_id == external_id))
-            return found is not None
+            return self._seen(session, external_id)
+
+    def _seen(self, session: Session, external_id: str) -> bool:
+        found = session.scalar(select(Message.id).where(Message.external_id == external_id))
+        return found is not None or session.get(ErasedMessageId, external_id) is not None
 
     def get_or_create(self, session: Session, channel: Channel, contact: str) -> Conversation:
         conversation = session.scalar(
@@ -284,11 +298,13 @@ class ConversationService:
             raise ConversationNotFound(str(conversation_id))
         return conversation
 
-    def _deliver(self, conversation: Conversation, text: str) -> None:
-        sender = self.senders.get(Channel(conversation.channel))
+    def _deliver(self, channel: str, contact: str, text: str) -> None:
+        """Envia pelo canal. Chamar fora de transação: o envio pode levar segundos (retries) e,
+        no SQLite, uma transação aberta trava o banco inteiro."""
+        sender = self.senders.get(Channel(channel))
         if sender is None:
             return  # simulador: o cliente busca por polling
-        sender(conversation.contact, text)
+        sender(contact, text)
 
     def assign(self, conversation_id: int, user_id: int) -> None:
         with self.session_factory.begin() as session:
@@ -303,7 +319,10 @@ class ConversationService:
             conversation = self._get(session, conversation_id)
             if not self.window_open(conversation):
                 raise WindowClosed(str(conversation_id))
-            self._deliver(conversation, text)  # falha aqui: nada é gravado
+            channel, contact = conversation.channel, conversation.contact
+        self._deliver(channel, contact, text)  # falha aqui: nada é gravado
+        with self.session_factory.begin() as session:
+            conversation = self._get(session, conversation_id)
             conversation.status = ConversationStatus.HUMAN
             if conversation.assigned_to is None:
                 conversation.assigned_to = user_id
@@ -335,10 +354,15 @@ class ConversationService:
             conversation.state = State.MENU
             conversation.context = {}
             conversation.unknown_count = 0
-            if self.window_open(conversation):
-                try:
-                    self._deliver(conversation, texts.RELEASED)
-                except DeliveryError:
-                    logger.warning("Aviso de fim de atendimento não entregue")
-                    return
-                self._add_message(session, conversation, Author.BOT, texts.RELEASED)
+            if not self.window_open(conversation):
+                return
+            channel, contact = conversation.channel, conversation.contact
+        try:
+            self._deliver(channel, contact, texts.RELEASED)
+        except DeliveryError:
+            logger.warning("Aviso de fim de atendimento não entregue")
+            return
+        with self.session_factory.begin() as session:
+            self._add_message(
+                session, self._get(session, conversation_id), Author.BOT, texts.RELEASED
+            )

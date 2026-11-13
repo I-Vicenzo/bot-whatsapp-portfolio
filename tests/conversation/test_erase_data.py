@@ -119,3 +119,19 @@ def test_erase_from_simulator_keeps_whatsapp_patient_with_same_number(
         assert appointment.patient_name == "Maria Silva"
         assert appointment.patient_phone == CONTACT
         assert appointment.status == AppointmentStatus.CONFIRMED
+
+
+def test_redelivered_webhook_after_erase_is_ignored(
+    service: ConversationService, session_factory: sessionmaker[Session]
+) -> None:
+    """A Meta reenvia o webhook do "sim" quando não recebe 200 a tempo; o reenvio não pode
+    recriar a conversa que acabou de ser apagada."""
+    service.receive(Channel.WHATSAPP, CONTACT, "apagar meus dados", external_id="wamid.1")
+    service.receive(Channel.WHATSAPP, CONTACT, "sim", external_id="wamid.2")
+
+    again = service.receive(Channel.WHATSAPP, CONTACT, "sim", external_id="wamid.2")
+
+    assert again.duplicate
+    assert service.already_received("wamid.2")
+    with session_factory() as session:
+        assert session.scalars(select(Conversation)).all() == []

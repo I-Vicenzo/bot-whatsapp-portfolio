@@ -172,6 +172,7 @@ class Appointment(Base):
     created_at: Mapped[datetime] = mapped_column(LocalDateTime)
     cancelled_at: Mapped[datetime | None] = mapped_column(LocalDateTime)
     reminder_sent_at: Mapped[datetime | None] = mapped_column(LocalDateTime)
+    reminder_failed_at: Mapped[datetime | None] = mapped_column(LocalDateTime)
 
     specialty: Mapped[Specialty] = relationship(lazy="joined")
 
@@ -236,6 +237,15 @@ class Message(Base):
     text: Mapped[str] = mapped_column(Text)
     external_id: Mapped[str | None] = mapped_column(String(128), unique=True)
     created_at: Mapped[datetime] = mapped_column(LocalDateTime)
+
+
+class ErasedMessageId(Base):
+    """Id externo de mensagem apagada a pedido do cliente: mantém a deduplicação de webhooks
+    depois que a conversa some. O id da Meta é opaco e não identifica o cliente."""
+
+    __tablename__ = "erased_message_ids"
+
+    external_id: Mapped[str] = mapped_column(String(128), primary_key=True)
 
 
 class LLMOutcome(StrEnum):
