@@ -34,7 +34,10 @@ def book(
     starts_at: datetime,
     phone: str,
     channel: Channel = Channel.WHATSAPP,
+    *,
+    booked_ahead: timedelta = timedelta(days=3),
 ) -> int:
+    """Marca a consulta; `booked_ahead` diz com quanta antecedência ela foi marcada."""
     with session_factory.begin() as session:
         appointment = scheduler.book(
             session,
@@ -44,6 +47,7 @@ def book(
             patient_name="Maria Silva",
             channel=channel,
         )
+        appointment.created_at = starts_at - booked_ahead
         return appointment.id
 
 
@@ -87,18 +91,56 @@ def test_sends_template_once_for_due_whatsapp_appointments(
 
 
 @respx.mock
-def test_failure_is_retried_next_cycle(
+def test_temporary_failure_is_retried_next_cycle(
     scheduler: Scheduler, session_factory: sessionmaker[Session], clock: FixedClock
 ) -> None:
     respx.post(SEND_URL).mock(
         side_effect=[
-            httpx.Response(400, json={"error": {"code": 132001}}),
+            *[httpx.Response(503)] * 4,  # 1 tentativa + 3 retries
             httpx.Response(200, json={"messages": [{"id": "w"}]}),
         ]
     )
     book(scheduler, session_factory, datetime(2026, 11, 13, 8, 30), "5547999990001")
     assert send_due_reminders(session_factory, client(), clock, SETTINGS) == 0
     assert send_due_reminders(session_factory, client(), clock, SETTINGS) == 1
+
+
+@respx.mock
+def test_permanent_refusal_is_not_retried(
+    scheduler: Scheduler, session_factory: sessionmaker[Session], clock: FixedClock
+) -> None:
+    """Template não aprovado (400): antes, era reenviado a cada ciclo para sempre."""
+    route = respx.post(SEND_URL).mock(
+        return_value=httpx.Response(400, json={"error": {"code": 132001}})
+    )
+    appointment_id = book(
+        scheduler, session_factory, datetime(2026, 11, 13, 8, 30), "5547999990001"
+    )
+    assert send_due_reminders(session_factory, client(), clock, SETTINGS) == 0
+    assert send_due_reminders(session_factory, client(), clock, SETTINGS) == 0
+    assert route.call_count == 1
+    with session_factory() as session:
+        appointment = session.get(Appointment, appointment_id)
+        assert appointment is not None
+        assert appointment.reminder_sent_at is None
+        assert appointment.reminder_failed_at == datetime(2026, 11, 12, 9, 0)
+
+
+@respx.mock
+def test_appointment_booked_inside_the_window_gets_no_reminder(
+    scheduler: Scheduler, session_factory: sessionmaker[Session], clock: FixedClock
+) -> None:
+    """Marcada hoje para amanhã: o cliente acabou de receber a confirmação."""
+    route = respx.post(SEND_URL).mock(return_value=httpx.Response(200, json={}))
+    book(
+        scheduler,
+        session_factory,
+        datetime(2026, 11, 13, 8, 30),
+        "5547999990001",
+        booked_ahead=timedelta(hours=20),
+    )
+    assert send_due_reminders(session_factory, client(), clock, SETTINGS) == 0
+    assert not route.called
 
 
 @respx.mock

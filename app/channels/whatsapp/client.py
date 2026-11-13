@@ -19,7 +19,12 @@ RETRY_STATUSES = frozenset({429, 500, 502, 503, 504})
 
 
 class WhatsAppError(Exception):
-    """Falha definitiva no envio (erro do cliente ou retries esgotados)."""
+    """Falha no envio depois dos retries. `permanent`: a Meta recusou a mensagem (4xx que não
+    seja limite de taxa) e repetir não adianta, ex.: template não aprovado, número inválido."""
+
+    def __init__(self, message: str, *, permanent: bool = False) -> None:
+        super().__init__(message)
+        self.permanent = permanent
 
 
 class WhatsAppClient:
@@ -157,7 +162,10 @@ class WhatsAppClient:
                     response.status_code,
                     _error_summary(response),
                 )
-                raise WhatsAppError(f"HTTP {response.status_code}")
+                raise WhatsAppError(
+                    f"HTTP {response.status_code}",
+                    permanent=response.is_client_error and response.status_code != 429,
+                )
             return response.json()
         raise WhatsAppError("tentativas esgotadas")  # pragma: no cover - laço sempre retorna
 
