@@ -247,3 +247,30 @@ def test_client_timeout() -> None:
     respx.post(URL).mock(side_effect=httpx.ReadTimeout("lento"))
     with pytest.raises(LLMError, match="ReadTimeout"):
         make_client().complete("s", "u")
+
+
+def test_ai_call_runs_outside_the_write_transaction(
+    clinic: ClinicData,
+    scheduler: Scheduler,
+    clock: FixedClock,
+    session_factory: sessionmaker[Session],
+) -> None:
+    """No SQLite a transação de escrita trava o banco inteiro; enquanto a IA pensa, outros
+    clientes precisam conseguir gravar (antes, esperavam o busy_timeout e falhavam)."""
+    seen: list[str] = []
+
+    def slow_llm(_system: str, _user: str) -> str:
+        other = service.receive(Channel.SIMULATOR, "5547999990002", "oi")
+        seen.append(other.replies[0].text)
+        return "Sim, atendemos."
+
+    ai = AIResponder(FakeLLM(slow_llm), clinic, clock)
+    engine = ConversationEngine(clinic, scheduler, clock, ai=ai)
+    service = ConversationService(session_factory, engine, clock)
+    service.receive(Channel.SIMULATOR, "5547999990001", "oi")
+    result = service.receive(Channel.SIMULATOR, "5547999990001", QUESTION)
+
+    assert [r.text for r in result.replies] == ["Sim, atendemos."]
+    assert seen
+    assert "assistente virtual" in seen[0]
+    assert llm_calls(session_factory) == ["answered"]

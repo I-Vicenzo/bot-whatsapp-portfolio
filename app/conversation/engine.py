@@ -21,7 +21,7 @@ from typing import Any
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.ai.responder import AIResponder, AIStatus
+from app.ai.responder import AIResponder, AIResult, AIStatus
 from app.clinic import ClinicData, SpecialtyInfo
 from app.clock import Clock
 from app.conversation import texts
@@ -76,12 +76,23 @@ class Source(StrEnum):
     SILENT = "silent"
 
 
+@dataclass(frozen=True)
+class PendingAI:
+    """A mensagem caiu na IA de reserva. Quem chama faz a chamada (de preferência fora da
+    transação) e devolve o resultado em `ConversationEngine.finish_ai`."""
+
+    question: str
+    is_new: bool
+    expired: bool = False
+
+
 @dataclass
 class EngineResult:
     replies: list[Reply]
     intent: str | None = None
     source: Source = Source.RULE
     erase_data: bool = False  # o serviço apaga os dados do contato depois de responder
+    pending_ai: PendingAI | None = None
 
 
 @dataclass
@@ -116,6 +127,16 @@ class ConversationEngine:
     # --- entrada --------------------------------------------------------------------------
 
     def handle(self, session: Session, conversation: Conversation, text: str) -> EngineResult:
+        """Processa a mensagem inteira, incluindo a chamada à IA, na sessão recebida."""
+        result = self.start(session, conversation, text)
+        if result.pending_ai is None or self.ai is None:
+            return result
+        answer = self.ai.settle(session, conversation, self.ai.ask(result.pending_ai.question))
+        return self.finish_ai(session, conversation, result.pending_ai, answer)
+
+    def start(self, session: Session, conversation: Conversation, text: str) -> EngineResult:
+        """Como `handle`, mas para antes da chamada à IA: nesse caso devolve `pending_ai` e
+        nenhuma resposta."""
         now = self.clock.local_now()
         previous_inbound = conversation.last_inbound_at
         conversation.last_inbound_at = now
@@ -133,6 +154,10 @@ class ConversationEngine:
             if expired:
                 self._reset(turn)
             result = self._dispatch(turn, is_new=previous_inbound is None)
+            if result.pending_ai is not None:
+                conversation.context = turn.ctx
+                pending = PendingAI(result.pending_ai.question, result.pending_ai.is_new, expired)
+                return EngineResult([], pending_ai=pending)
             if expired:
                 result.replies.insert(0, Reply(texts.EXPIRED))
             self._track_understanding(turn, result)
@@ -232,18 +257,40 @@ class ConversationEngine:
         if social is Intent.GREETING:
             return EngineResult([self._menu(texts.greeting(self.clinic))], Intent.GREETING)
 
-        if self.ai is not None:
-            ai_result = self.ai.answer(turn.session, turn.conversation, turn.raw)
-            if ai_result.status is AIStatus.ANSWERED and ai_result.text:
-                return EngineResult([Reply(ai_result.text)], "ai", Source.AI)
-            if ai_result.status is AIStatus.HANDOFF:
-                return self._handoff(turn, urgent=False, reason=texts.AI_HANDOFF_REASON)
-            # Erro, limite ou pergunta longa: segue como se a IA estivesse desligada.
+        if (
+            self.ai is not None
+            and self.ai.precheck(turn.session, turn.conversation, turn.raw) is None
+        ):
+            return EngineResult([], pending_ai=PendingAI(turn.raw, is_new))
+        # Sem IA, limite de uso ou pergunta longa: resposta padrão.
+        return self._fallback(is_new=is_new)
 
+    def _fallback(self, *, is_new: bool) -> EngineResult:
         if is_new:
             return EngineResult([self._menu(texts.greeting(self.clinic))], Intent.GREETING)
-
         return EngineResult([self._menu(texts.NOT_UNDERSTOOD)], source=Source.NOT_UNDERSTOOD)
+
+    def finish_ai(
+        self,
+        session: Session,
+        conversation: Conversation,
+        pending: PendingAI,
+        answer: AIResult,
+    ) -> EngineResult:
+        """Segunda metade de `start` quando a mensagem foi para a IA."""
+        turn = _Turn(session, conversation, pending.question, normalize(pending.question))
+        turn.ctx = dict(conversation.context or {})
+        if answer.status is AIStatus.ANSWERED and answer.text:
+            result = EngineResult([Reply(answer.text)], "ai", Source.AI)
+        elif answer.status is AIStatus.HANDOFF:
+            result = self._handoff(turn, urgent=False, reason=texts.AI_HANDOFF_REASON)
+        else:  # erro do provedor: segue como se a IA estivesse desligada
+            result = self._fallback(is_new=pending.is_new)
+        if pending.expired:
+            result.replies.insert(0, Reply(texts.EXPIRED))
+        self._track_understanding(turn, result)
+        conversation.context = turn.ctx
+        return result
 
     def _menu(self, text: str = texts.MENU_PROMPT) -> Reply:
         return Reply(text, texts.MENU_OPTIONS)

@@ -96,7 +96,11 @@ class ConversationService:
         stored_text: str | None = None,
     ) -> InboundResult:
         """Processa uma mensagem do cliente. `unsupported_kind` (ex.: "audio") registra a
-        mensagem sem passar pelo motor e responde que só entendemos texto."""
+        mensagem sem passar pelo motor e responde que só entendemos texto.
+
+        Quando a mensagem cai na IA, são duas transações: a primeira grava a mensagem e decide;
+        a chamada ao provedor roda fora dela (no SQLite, a transação de escrita trava o banco
+        inteiro); a segunda grava a resposta."""
         with self.session_factory.begin() as session:
             conversation = self.get_or_create(session, channel, contact)
             if display_name:
@@ -113,29 +117,50 @@ class ConversationService:
             if unsupported_kind:
                 result = self._unsupported(conversation)
             else:
-                result = self.engine.handle(session, conversation, text)
+                result = self.engine.start(session, conversation, text)
             if result.erase_data:
                 self._erase(session, conversation)
                 return InboundResult(conversation_id=conversation.id, replies=result.replies)
+            if result.pending_ai is None:
+                return self._store_replies(session, conversation, result, [inbound.id])
+            conversation_id, inbound_id = conversation.id, inbound.id
 
-            ids = [inbound.id]
-            author = Author.AI if result.source is Source.AI else Author.BOT
-            for reply in result.replies:
-                message = self._add_message(session, conversation, author, reply.render())
-                if message is not None:  # sem external_id nunca é duplicata
-                    ids.append(message.id)
+        pending, ai = result.pending_ai, self.engine.ai
+        if ai is None:  # pragma: no cover - o motor só devolve pendência com a IA ligada
+            raise RuntimeError("pendência de IA sem IA configurada")
+        exchange = ai.ask(pending.question)
 
-            return InboundResult(
-                conversation_id=conversation.id,
-                replies=result.replies,
-                message_ids=ids,
-                debug=Debug(
-                    state=conversation.state,
-                    status=conversation.status,
-                    intent=result.intent,
-                    source=str(result.source if result.replies else Source.SILENT),
-                ),
-            )
+        with self.session_factory.begin() as session:
+            conversation = session.get(Conversation, conversation_id)
+            if conversation is None:  # apagada no meio do caminho ("apagar meus dados")
+                return InboundResult(conversation_id)
+            answer = ai.settle(session, conversation, exchange)
+            result = self.engine.finish_ai(session, conversation, pending, answer)
+            return self._store_replies(session, conversation, result, [inbound_id])
+
+    def _store_replies(
+        self,
+        session: Session,
+        conversation: Conversation,
+        result: EngineResult,
+        ids: list[int],
+    ) -> InboundResult:
+        author = Author.AI if result.source is Source.AI else Author.BOT
+        for reply in result.replies:
+            message = self._add_message(session, conversation, author, reply.render())
+            if message is not None:  # sem external_id nunca é duplicata
+                ids.append(message.id)
+        return InboundResult(
+            conversation_id=conversation.id,
+            replies=result.replies,
+            message_ids=ids,
+            debug=Debug(
+                state=conversation.state,
+                status=conversation.status,
+                intent=result.intent,
+                source=str(result.source if result.replies else Source.SILENT),
+            ),
+        )
 
     def _erase(self, session: Session, conversation: Conversation) -> None:
         """LGPD: cancela consultas futuras, anonimiza o histórico de consultas do telefone (só

@@ -50,6 +50,14 @@ class AIResult:
     text: str | None = None
 
 
+@dataclass(frozen=True)
+class AIExchange:
+    """Resultado bruto da chamada ao provedor, ainda não gravado no banco."""
+
+    raw: str | None  # None quando a chamada falhou
+    latency_ms: int
+
+
 class AIResponder:
     def __init__(
         self, llm: LLMClient, clinic: ClinicData, clock: Clock, limits: AILimits | None = None
@@ -59,29 +67,53 @@ class AIResponder:
         self.limits = limits or AILimits()
         self.system_prompt = build_system_prompt(clinic)
 
+    # Três partes para que a de rede (`ask`) rode fora da transação: no SQLite a transação de
+    # escrita trava o banco inteiro, e o provedor pode levar segundos para responder.
+
     def answer(self, session: Session, conversation: Conversation, question: str) -> AIResult:
+        """As três partes de uma vez, na mesma sessão (testes e scripts)."""
+        blocked = self.precheck(session, conversation, question)
+        if blocked is not None:
+            return blocked
+        return self.settle(session, conversation, self.ask(question))
+
+    def precheck(
+        self, session: Session, conversation: Conversation, question: str
+    ) -> AIResult | None:
+        """Pergunta vazia ou longa, ou limite de uso estourado: não chama o provedor."""
         question = question.strip()
         if not question or len(question) > self.limits.max_question_chars:
             return AIResult(AIStatus.SKIPPED)
         if self._over_limits(session, conversation):
             return AIResult(AIStatus.LIMITED)
+        return None
 
+    def ask(self, question: str) -> AIExchange:
+        """Só a chamada ao provedor; não toca no banco."""
         started = time.perf_counter()
+        raw: str | None
         try:
-            raw = self.llm.complete(self.system_prompt, question)
+            raw = self.llm.complete(self.system_prompt, question.strip())
         except LLMError as exc:
             logger.warning("IA: falha na chamada (%s)", exc)
-            self._record(session, conversation, started, LLMOutcome.ERROR)
-            return AIResult(AIStatus.ERROR)
+            raw = None
+        return AIExchange(raw, int((time.perf_counter() - started) * 1000))
 
-        text = raw.strip()
+    def settle(
+        self, session: Session, conversation: Conversation, exchange: AIExchange
+    ) -> AIResult:
+        """Filtra a resposta e grava o registro de uso."""
+        if exchange.raw is None:
+            self._record(session, conversation, exchange.latency_ms, LLMOutcome.ERROR)
+            return AIResult(AIStatus.ERROR)
+        text = exchange.raw.strip()
         if _CLAIMS_ACTION.search(normalize(text)):
             logger.warning("IA: resposta descartada por afirmar uma ação que não executa")
             text = ""
         if not text or HANDOFF_MARKER in text:
-            self._record(session, conversation, started, LLMOutcome.HANDOFF)
+            self._record(session, conversation, exchange.latency_ms, LLMOutcome.HANDOFF)
             return AIResult(AIStatus.HANDOFF)
-        self._record(session, conversation, started, LLMOutcome.ANSWERED)
+        self._record(session, conversation, exchange.latency_ms, LLMOutcome.ANSWERED)
         return AIResult(AIStatus.ANSWERED, text[:MAX_ANSWER_CHARS])
 
     def _over_limits(self, session: Session, conversation: Conversation) -> bool:
@@ -101,9 +133,8 @@ class AIResponder:
         return (today or 0) >= self.limits.daily_cap
 
     def _record(
-        self, session: Session, conversation: Conversation, started: float, outcome: LLMOutcome
+        self, session: Session, conversation: Conversation, latency_ms: int, outcome: LLMOutcome
     ) -> None:
-        latency_ms = int((time.perf_counter() - started) * 1000)
         session.add(
             LLMCall(
                 conversation_id=conversation.id,
