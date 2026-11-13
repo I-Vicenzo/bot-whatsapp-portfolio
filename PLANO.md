@@ -290,7 +290,7 @@ Observações:
 
 ### Fase 7: Extras pós-MVP (por impacto)
 
-- [ ] Demo pública hospedada (com os limites anti-abuso da seção 8): link direto no portfólio. **Pendência (usuário):** escolher e criar a conta de hospedagem (ex.: Fly.io, Render ou VPS); o container já está pronto
+- [x] Demo pública hospedada (com os limites anti-abuso da seção 8): <https://bot-whatsapp-portfolio.onrender.com>, Render plano gratuito via `render.yaml`, com `PUBLIC_DEMO=true`
 - [x] Botões e listas interativas do WhatsApp (até 3 opções curtas viram botões, até 10 numeradas viram lista; o resto segue como texto)
 - [x] Transcrição de áudio (Whisper via Groq): áudio é muito usado no WhatsApp no Brasil (`AUDIO_TRANSCRIPTION_ENABLED=true`; falha ou desligado = resposta padrão)
 - [x] PostgreSQL via override do docker-compose (triggers em PL/pgSQL): migrações por dialeto, `clinic_now()` lendo `app.now` gravado por transação, suíte inteira rodando no Postgres (`TEST_DATABASE_URL`) num job próprio do CI
@@ -376,4 +376,4 @@ Tudo o que depende de conta, credencial ou publicação do usuário. O código n
 - **Conta de desenvolvedor na Meta:** conectar o número de teste (`docs/whatsapp-setup.md`), fazer a conversa real de ponta a ponta (Fase 3) e gravar o vídeo de 60 a 90 s (Fase 6, roteiro na seção 10).
 - **Template de lembrete:** cadastrar e aprovar `lembrete_consulta` na Meta (texto em `docs/whatsapp-setup.md`) e ligar `REMINDERS_ENABLED`.
 - **Chave do Groq:** rodar `uv run python -m scripts.eval_llm` contra o provedor real (Fase 4) e conferir o modelo atual em console.groq.com/docs/models.
-- **Demo pública:** criar conta no Render (com GitHub) e aplicar o blueprint `render.yaml` (botão "Deploy to Render" no README); depois, colocar o link no README e na descrição do repositório. Escolhido o Render por ter plano gratuito para container Docker; Fly.io não tem mais plano gratuito para contas novas e Vercel não serve (SQLite efêmero e sem processo contínuo).
+- ~~**Demo pública:**~~ feita em 12/11/2026: <https://bot-whatsapp-portfolio.onrender.com>, aplicada pelo blueprint `render.yaml`, com link no README e na descrição do repositório. Escolhido o Render por ter plano gratuito para container Docker; Fly.io não tem mais plano gratuito para contas novas e Vercel não serve (SQLite efêmero e sem processo contínuo).

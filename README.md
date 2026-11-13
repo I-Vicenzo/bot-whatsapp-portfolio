@@ -6,6 +6,8 @@
 
 Atendente virtual de uma clínica **fictícia**: informa, agenda, consulta, cancela e passa para um humano quando precisa. Regras previsíveis resolvem o roteiro; a IA só entra no que fica de fora, e nunca executa ações.
 
+**Demo online:** <https://bot-whatsapp-portfolio.onrender.com> (simulador) e [/admin](https://bot-whatsapp-portfolio.onrender.com/admin) (painel, login na tela). Plano gratuito: o primeiro acesso depois de um tempo parado leva perto de um minuto.
+
 <p align="center">
   <img src="docs/img/demo.gif" alt="Agendamento completo no simulador: especialidade, dia, horário, nome e confirmação" width="520" />
 </p>
@@ -133,6 +135,8 @@ Todas as variáveis estão em [.env.example](.env.example).
 
 ## Demo pública (Render, plano gratuito)
 
+No ar em <https://bot-whatsapp-portfolio.onrender.com>.
+
 [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/I-Vicenzo/bot-whatsapp-portfolio)
 
 O [render.yaml](render.yaml) sobe o container em modo de demonstração (`PUBLIC_DEMO=true`): dados fictícios, login do painel exibido na tela e banco recriado a cada reinício. No plano gratuito o serviço dorme após 15 minutos sem acesso; o primeiro acesso depois disso leva perto de um minuto.
@@ -159,8 +163,6 @@ São mais de 400 testes, com cobertura acima de 95%: diálogos completos (`chat.
 Todos os dados são **fictícios**: clínica, profissionais, endereço, telefones e convênios. O bot não pede dados clínicos nem dá orientação médica, e em urgência sempre orienta ligar 192. Não use com dados reais de saúde sem adequação à LGPD.
 
 ## Próximos passos
-
-- Demo pública hospedada
 
 Roteiro completo e decisões em [PLANO.md](PLANO.md).
 
