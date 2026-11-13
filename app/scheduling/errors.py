@@ -48,7 +48,10 @@ class AppointmentNotFound(SchedulingError):
 _DB_ERRORS: tuple[tuple[str, type[SchedulingError]], ...] = (
     ("appointments.specialty_id, appointments.starts_at", SlotTaken),
     ("uq_appointments_specialty_slot", SlotTaken),
-    ("appointments.patient_phone, appointments.starts_at", PatientAlreadyBooked),
+    (
+        "appointments.channel, appointments.patient_phone, appointments.starts_at",
+        PatientAlreadyBooked,
+    ),
     ("uq_appointments_patient_slot", PatientAlreadyBooked),
     ("outside_business_hours", OutsideBusinessHours),
     ("too_soon", TooSoon),

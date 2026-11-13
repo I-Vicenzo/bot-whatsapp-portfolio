@@ -138,11 +138,15 @@ class ConversationService:
             )
 
     def _erase(self, session: Session, conversation: Conversation) -> None:
-        """LGPD: cancela consultas futuras, anonimiza o histórico de consultas do telefone e
-        apaga a conversa (mensagens e registros de IA saem em cascata no banco)."""
+        """LGPD: cancela consultas futuras, anonimiza o histórico de consultas do telefone (só
+        do canal da conversa) e apaga a conversa (mensagens e registros de IA saem em cascata
+        no banco)."""
         now = self.clock.local_now()
         appointments = session.scalars(
-            select(Appointment).where(Appointment.patient_phone == conversation.contact)
+            select(Appointment).where(
+                Appointment.channel == conversation.channel,
+                Appointment.patient_phone == conversation.contact,
+            )
         ).all()
         for appointment in appointments:
             if appointment.status == AppointmentStatus.CONFIRMED and appointment.starts_at >= now:

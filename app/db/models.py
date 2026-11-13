@@ -151,6 +151,7 @@ class Appointment(Base):
         ),
         Index(
             "uq_appointments_patient_slot",
+            "channel",
             "patient_phone",
             "starts_at",
             unique=True,

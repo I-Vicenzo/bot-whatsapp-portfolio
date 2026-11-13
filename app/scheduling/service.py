@@ -103,11 +103,14 @@ class Scheduler:
             day += timedelta(days=1)
         return days
 
-    def list_upcoming(self, session: Session, phone: str) -> list[Appointment]:
+    def list_upcoming(self, session: Session, phone: str, *, channel: Channel) -> list[Appointment]:
+        """Consultas futuras do contato, só do canal dele: o simulador é público e aceita
+        qualquer número, então não pode enxergar consultas feitas pelo WhatsApp."""
         return list(
             session.scalars(
                 select(Appointment)
                 .where(
+                    Appointment.channel == channel,
                     Appointment.patient_phone == phone,
                     Appointment.status == AppointmentStatus.CONFIRMED,
                     Appointment.starts_at >= self.clock.local_now(),
@@ -172,11 +175,15 @@ class Scheduler:
         session.flush()
         return appointment
 
-    def cancel(self, session: Session, appointment_id: int, phone: str) -> Appointment:
-        """Cancela uma consulta futura do próprio telefone. Cancelar libera o horário."""
+    def cancel(
+        self, session: Session, appointment_id: int, phone: str, *, channel: Channel
+    ) -> Appointment:
+        """Cancela uma consulta futura do próprio telefone, no mesmo canal. Cancelar libera o
+        horário."""
         appointment = session.scalar(
             select(Appointment).where(
                 Appointment.id == appointment_id,
+                Appointment.channel == channel,
                 Appointment.patient_phone == phone,
                 Appointment.status == AppointmentStatus.CONFIRMED,
                 Appointment.starts_at >= self.clock.local_now(),

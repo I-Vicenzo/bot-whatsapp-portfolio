@@ -98,3 +98,24 @@ def test_erase_cancels_future_anonymizes_and_deletes_conversation(
     # O horário cancelado volta a ficar livre; e o contato recomeça do zero.
     again = service.receive(Channel.SIMULATOR, CONTACT, "xyz")
     assert "assistente virtual" in again.replies[0].text
+
+
+def test_erase_from_simulator_keeps_whatsapp_patient_with_same_number(
+    service: ConversationService, session_factory: sessionmaker[Session]
+) -> None:
+    """O simulador é público: "apagar meus dados" com o número de um paciente do WhatsApp não
+    pode cancelar nem anonimizar as consultas dele."""
+    for text in ["agendar cardio", "segunda", "10h", "Maria Silva", "sim"]:
+        service.receive(Channel.WHATSAPP, CONTACT, text)
+
+    service.receive(Channel.SIMULATOR, CONTACT, "minhas consultas")
+    listed = service.receive(Channel.SIMULATOR, CONTACT, "minhas consultas")
+    assert "Cardiologia" not in listed.replies[0].text
+    service.receive(Channel.SIMULATOR, CONTACT, "apagar meus dados")
+    service.receive(Channel.SIMULATOR, CONTACT, "sim")
+
+    with session_factory() as session:
+        appointment = session.scalars(select(Appointment)).one()
+        assert appointment.patient_name == "Maria Silva"
+        assert appointment.patient_phone == CONTACT
+        assert appointment.status == AppointmentStatus.CONFIRMED

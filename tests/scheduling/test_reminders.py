@@ -110,7 +110,7 @@ def test_cancelled_appointments_are_not_reminded(
         scheduler, session_factory, datetime(2026, 11, 13, 8, 30), "5547999990001"
     )
     with session_factory.begin() as session:
-        scheduler.cancel(session, appointment_id, "5547999990001")
+        scheduler.cancel(session, appointment_id, "5547999990001", channel=Channel.WHATSAPP)
     assert send_due_reminders(session_factory, client(), clock, SETTINGS) == 0
     assert not route.called
 

@@ -515,12 +515,16 @@ class ConversationEngine:
     # --- consultas e cancelamento ---------------------------------------------------------
 
     def _my_appointments(self, turn: _Turn) -> EngineResult:
-        appointments = self.scheduler.list_upcoming(turn.session, turn.conversation.contact)
+        appointments = self.scheduler.list_upcoming(
+            turn.session, turn.conversation.contact, channel=Channel(turn.conversation.channel)
+        )
         text = texts.upcoming(appointments) if appointments else texts.NO_APPOINTMENTS
         return EngineResult([Reply(text)], Intent.MY_APPOINTMENTS)
 
     def _start_cancel(self, turn: _Turn) -> EngineResult:
-        appointments = self.scheduler.list_upcoming(turn.session, turn.conversation.contact)
+        appointments = self.scheduler.list_upcoming(
+            turn.session, turn.conversation.contact, channel=Channel(turn.conversation.channel)
+        )
         if not appointments:
             return EngineResult([Reply(texts.NO_APPOINTMENTS)], Intent.CANCEL)
         if len(appointments) == 1:
@@ -532,7 +536,10 @@ class ConversationEngine:
     def _cancel_candidates(self, turn: _Turn) -> list[Appointment]:
         ids = turn.ctx.get("cancel_ids", [])
         by_id = {
-            a.id: a for a in self.scheduler.list_upcoming(turn.session, turn.conversation.contact)
+            a.id: a
+            for a in self.scheduler.list_upcoming(
+                turn.session, turn.conversation.contact, channel=Channel(turn.conversation.channel)
+            )
         }
         return [by_id[i] for i in ids if i in by_id]
 
@@ -577,7 +584,12 @@ class ConversationEngine:
         if not answer:
             return EngineResult([Reply(texts.CANCEL_KEPT)], Intent.CANCEL)
         try:
-            self.scheduler.cancel(turn.session, appointment_id, turn.conversation.contact)
+            self.scheduler.cancel(
+                turn.session,
+                appointment_id,
+                turn.conversation.contact,
+                channel=Channel(turn.conversation.channel),
+            )
         except AppointmentNotFound:
             return EngineResult([Reply(texts.CANCEL_NOT_FOUND)], Intent.CANCEL)
         return EngineResult([Reply(texts.CANCELLED)], Intent.CANCEL)

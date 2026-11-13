@@ -7,7 +7,7 @@ import pytest
 
 from app.clock import FixedClock
 from app.conversation import Source, State
-from app.db.models import AppointmentStatus, ConversationStatus, Priority
+from app.db.models import AppointmentStatus, Channel, ConversationStatus, Priority
 from app.scheduling import Scheduler
 from tests.conversation.conftest import Chat
 
@@ -401,7 +401,9 @@ def test_cancel_appointment_already_gone(chat: Chat) -> None:
     appointment = chat.appointments()[0]
     other = Chat(chat.engine, chat.session_factory, chat.clock, chat.contact)
     with chat.session_factory.begin() as session:
-        chat.engine.scheduler.cancel(session, appointment.id, chat.contact)
+        chat.engine.scheduler.cancel(
+            session, appointment.id, chat.contact, channel=Channel.SIMULATOR
+        )
     other.send("sim")
     assert "Não encontrei essa consulta" in other.text
 
@@ -412,7 +414,9 @@ def test_cancel_pick_when_appointments_vanished(chat: Chat) -> None:
     chat.send("cancelar")
     with chat.session_factory.begin() as session:  # canceladas por outro canal
         for appointment in chat.appointments():
-            chat.engine.scheduler.cancel(session, appointment.id, chat.contact)
+            chat.engine.scheduler.cancel(
+                session, appointment.id, chat.contact, channel=Channel.SIMULATOR
+            )
     chat.send("1")
     assert "não tem consultas agendadas" in chat.text
 

@@ -33,6 +33,7 @@ def book(
     *,
     phone: str = PHONE,
     slug: str = "cardiologia",
+    channel: Channel = Channel.SIMULATOR,
 ) -> Appointment:
     return scheduler.book(
         session,
@@ -40,7 +41,7 @@ def book(
         starts_at=starts_at,
         patient_phone=phone,
         patient_name="Paciente Teste",
-        channel=Channel.SIMULATOR,
+        channel=channel,
     )
 
 
@@ -134,7 +135,7 @@ def test_book_and_list_upcoming(
         sooner = book(scheduler, session, at(MONDAY, "09:00"), slug="clinica-geral")
         book(scheduler, session, at(MONDAY, "10:00"), phone="5500000000999")
     with session_factory() as session:
-        upcoming = scheduler.list_upcoming(session, PHONE)
+        upcoming = scheduler.list_upcoming(session, PHONE, channel=Channel.SIMULATOR)
     assert [a.id for a in upcoming] == [sooner.id, later.id]
     assert upcoming[1].specialty.name == "Cardiologia"
     assert upcoming[1].created_at == datetime(2026, 11, 12, 9, 0)
@@ -170,7 +171,7 @@ def test_slot_taken_keeps_outer_transaction_usable(
             book(scheduler, session, at(MONDAY, "10:00"))
         book(scheduler, session, at(MONDAY, "10:30"))  # mesma transação segue válida
     with session_factory() as session:
-        assert len(scheduler.list_upcoming(session, PHONE)) == 1
+        assert len(scheduler.list_upcoming(session, PHONE, channel=Channel.SIMULATOR)) == 1
 
 
 def test_patient_double_booking(
@@ -180,6 +181,26 @@ def test_patient_double_booking(
         book(scheduler, session, at(MONDAY, "10:00"), slug="cardiologia")
         with pytest.raises(PatientAlreadyBooked):
             book(scheduler, session, at(MONDAY, "10:00"), slug="clinica-geral")
+
+
+def test_channels_do_not_see_each_others_appointments(
+    scheduler: Scheduler, session_factory: sessionmaker[Session]
+) -> None:
+    """O simulador é público e aceita qualquer número: não pode listar, cancelar nem esbarrar
+    nas consultas de um paciente do WhatsApp com o mesmo número."""
+    with session_factory.begin() as session:
+        whatsapp = book(scheduler, session, at(MONDAY, "10:00"), channel=Channel.WHATSAPP)
+        # mesmo número, mesmo horário, outro canal: não é o mesmo paciente
+        book(scheduler, session, at(MONDAY, "10:00"), slug="clinica-geral")
+    with session_factory.begin() as session:
+        simulator = scheduler.list_upcoming(session, PHONE, channel=Channel.SIMULATOR)
+        assert [a.channel for a in simulator] == [Channel.SIMULATOR]
+        with pytest.raises(AppointmentNotFound):
+            scheduler.cancel(session, whatsapp.id, PHONE, channel=Channel.SIMULATOR)
+    with session_factory() as session:
+        assert [
+            a.id for a in scheduler.list_upcoming(session, PHONE, channel=Channel.WHATSAPP)
+        ] == [whatsapp.id]
 
 
 def test_race_for_the_same_slot(
@@ -218,7 +239,7 @@ def test_cancel_frees_slot(scheduler: Scheduler, session_factory: sessionmaker[S
     with session_factory.begin() as session:
         appointment = book(scheduler, session, at(MONDAY, "10:00"))
     with session_factory.begin() as session:
-        cancelled = scheduler.cancel(session, appointment.id, PHONE)
+        cancelled = scheduler.cancel(session, appointment.id, PHONE, channel=Channel.SIMULATOR)
         assert cancelled.status == AppointmentStatus.CANCELLED
         assert cancelled.cancelled_at == datetime(2026, 11, 12, 9, 0)
     with session_factory.begin() as session:
@@ -231,11 +252,11 @@ def test_cannot_cancel_someone_elses_or_twice(
     with session_factory.begin() as session:
         appointment = book(scheduler, session, at(MONDAY, "10:00"))
     with session_factory.begin() as session, pytest.raises(AppointmentNotFound):
-        scheduler.cancel(session, appointment.id, "5599999999999")
+        scheduler.cancel(session, appointment.id, "5599999999999", channel=Channel.SIMULATOR)
     with session_factory.begin() as session:
-        scheduler.cancel(session, appointment.id, PHONE)
+        scheduler.cancel(session, appointment.id, PHONE, channel=Channel.SIMULATOR)
     with session_factory.begin() as session, pytest.raises(AppointmentNotFound):
-        scheduler.cancel(session, appointment.id, PHONE)
+        scheduler.cancel(session, appointment.id, PHONE, channel=Channel.SIMULATOR)
 
 
 def test_past_appointments_are_not_upcoming_nor_cancellable(
@@ -245,9 +266,9 @@ def test_past_appointments_are_not_upcoming_nor_cancellable(
         appointment = book(scheduler, session, at(MONDAY, "10:00"))
     clock.advance(timedelta(days=5))
     with session_factory() as session:
-        assert scheduler.list_upcoming(session, PHONE) == []
+        assert scheduler.list_upcoming(session, PHONE, channel=Channel.SIMULATOR) == []
         with pytest.raises(AppointmentNotFound):
-            scheduler.cancel(session, appointment.id, PHONE)
+            scheduler.cancel(session, appointment.id, PHONE, channel=Channel.SIMULATOR)
 
 
 def test_unknown_integrity_error_is_not_translated(db_engine: Engine) -> None:
