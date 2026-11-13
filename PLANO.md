@@ -301,6 +301,19 @@ Observações:
 - [x] Métricas no painel: resolvido pelo bot, uso de IA, tempo até atendimento humano (tabela `handoffs` com pedido e primeira resposta)
 - [x] Teste E2E do simulador com Playwright no CI (job `e2e`: agendamento por botões, texto do cliente sem virar HTML, resposta do atendente chegando ao simulador)
 
+### Fase 8: Revisão pós-v1.1.0 (release `v1.1.1`)
+
+Revisão com `/code-review` (backend) e as Web Interface Guidelines (interface). Nenhuma pendência externa foi eliminada; os itens abaixo eram de código.
+
+- [x] Segurança: consultas isoladas por canal (listar, cancelar, "apagar meus dados" e índice único de paciente por horário, migração 0007). Antes, o simulador público alcançava consultas de pacientes do WhatsApp pelo número
+- [x] SQLite: nenhuma chamada de rede dentro de transação (IA em duas fases `start`/`finish_ai`; resposta do atendente e aviso de devolução; lembretes)
+- [x] Lembretes: recusa definitiva (4xx) marca `reminder_failed_at` e não repete; consulta marcada dentro da janela de 24 h não recebe lembrete
+- [x] LGPD: ids externos das mensagens apagadas guardados em `erased_message_ids` (migração 0008) para a deduplicação de webhooks continuar valendo
+- [x] Especialidade removida no meio do agendamento: aviso e menu em vez de silêncio
+- [x] Painel: lista de conversas com `ORDER BY`/`LIMIT` no banco
+- [x] Interface: acessibilidade (foco, contraste AA no escuro, rótulos, regiões ao vivo) e corridas no polling do simulador e do painel
+- [x] Versão `1.1.1` em `app/__init__.py` e `pyproject.toml`, com teste que impede divergência
+
 ## 8. Segurança (transversal)
 
 - [x] Assinatura do webhook validada sobre o corpo bruto, comparação em tempo constante
@@ -309,6 +322,7 @@ Observações:
 - [x] Painel: Argon2; cookie HttpOnly + SameSite (+ Secure em produção); CSRF mitigado (SameSite + corpo JSON + checagem de `Origin`); limite de tentativas de login; em produção, recusa iniciar com senha padrão
 - [x] Simulador exposto: rate limit por IP, tamanho máximo de mensagem, teto de chamadas à IA
 - [x] XSS: conteúdo vindo de cliente nunca vai para `innerHTML`
+- [x] Canais isolados: cada canal é um espaço de contatos próprio; o simulador público não lê nem altera consultas do WhatsApp
 - [x] IA sem ferramentas nem ações, com contexto só de dados públicos da clínica: uma injeção de prompt não agenda, não cancela e não expõe dados de outros pacientes
 - [x] Container não-root; dependências travadas no `uv.lock`
 
@@ -360,5 +374,5 @@ Tudo o que depende de conta, credencial ou publicação do usuário. O código n
 - **Conta de desenvolvedor na Meta:** conectar o número de teste (`docs/whatsapp-setup.md`), fazer a conversa real de ponta a ponta (Fase 3) e gravar o vídeo de 60 a 90 s (Fase 6, roteiro na seção 10).
 - **Template de lembrete:** cadastrar e aprovar `lembrete_consulta` na Meta (texto em `docs/whatsapp-setup.md`) e ligar `REMINDERS_ENABLED`.
 - **Chave do Groq:** rodar `uv run python -m scripts.eval_llm` contra o provedor real (Fase 4) e conferir o modelo atual em console.groq.com/docs/models.
-- **Releases no GitHub:** publicar com `gh release create v1.0.0 --title v1.0.0 --notes-file docs/release-v1.0.0.md` e `gh release create v1.1.0 --title v1.1.0 --notes-file docs/release-v1.1.0.md` (criar conteúdo público é bloqueado para o assistente).
-- **Demo pública:** escolher a hospedagem (ex.: Fly.io, Render ou VPS); o container já está pronto.
+- **Releases no GitHub:** com a conta `I-Vicenzo` ativa (`gh auth switch -u I-Vicenzo`), publicar `gh release create v1.0.0 --title v1.0.0 --notes-file docs/release-v1.0.0.md`, o mesmo para `v1.1.0` e `gh release create v1.1.1 --title v1.1.1 --notes-file docs/release-v1.1.1.md --latest` (criar conteúdo público é bloqueado para o assistente). A `v1.1.0` responde `1.0.0` no `/health`; a `v1.1.1` corrige.
+- **Demo pública:** escolher a hospedagem (Fly.io, Render ou VPS; o container já está pronto). Vercel não serve: SQLite efêmero e sem processo contínuo para o ciclo de lembretes. Pré-requisito resolvido na Fase 8: o simulador público já não enxerga consultas de pacientes do WhatsApp.
